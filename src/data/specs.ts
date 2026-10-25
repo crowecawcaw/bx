@@ -243,7 +243,9 @@ export const FEATURES: Feature[] = [
       { text: 'On the south side, opposite the table', ref: 'Exodus 40:24-25' },
     ],
     interpretation: [
-      'Height and branch shape are not given. Shown about 3 cubits tall with rounded branches. Some (e.g. Maimonides) drew straight diagonal branches.',
+      'Height and branch shape are not given. Shown about 3 cubits tall, shaped like an almond bough: curved branches that taper, each with three almond cups, knops and flowers (Ex 25:33). Some (e.g. Maimonides) drew straight diagonal branches.',
+      'Scripture says the lamps give light "over against it" (Ex 25:37), but not which way the branches face. Here they run north–south so the face turns toward the entrance; others turn it toward the table.',
+      'The three curved legs follow Rashi on Ex 25:31.',
     ],
     refs: ['Exodus 25:31-40', 'Exodus 37:17-24', 'Leviticus 24:1-4'],
   },
@@ -312,7 +314,7 @@ export const FEATURES: Feature[] = [
     ],
     interpretation: [
       'The cherubim’s form is not described. They are shown as kneeling winged figures.',
-      'The poles run east–west, so their ends could be seen from the Holy Place (1 Kings 8:8).',
+      'Which way the ark sat is not stated. Here its length runs north–south and its poles east–west (Rashi on Ex 25:12; Talmud, Menachot 98a), so the pole ends pressed toward the veil (1 Kings 8:8) and from the entrance you see both cherubim side by side.',
       'The soft light above the mercy seat stands for the Presence (Lev 16:2). It is not a lamp.',
     ],
     refs: ['Exodus 25:10-22', 'Exodus 37:1-9', 'Hebrews 9:3-5'],

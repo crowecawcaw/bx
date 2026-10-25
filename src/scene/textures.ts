@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { drawCherub } from './cherubArt';
 
 // The four commanded fabric colours (Ex 26:1, 31, 36; 27:16)
 export const BLUE = '#26458f'; // tekhelet
@@ -67,101 +68,6 @@ function noise(ctx: CanvasRenderingContext2D, w: number, h: number, n: number, r
   }
 }
 
-/** A stylised cherub, seen from the front: robed figure with two great wings lifted
- *  up and outward. Scripture commands cherubim on the veil and inner curtains (Ex 26:1, 31)
- *  without describing their form; this is a restrained, symmetric rendering. */
-export function drawCherub(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number, body: string, wing: string, line: string) {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.scale(s / 100, s / 100);
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = line;
-  for (const side of [-1, 1]) {
-    ctx.save();
-    ctx.scale(side, 1);
-    // wing outline: from the shoulder up to a high tip, then scalloped primaries back down
-    ctx.beginPath();
-    ctx.moveTo(10, -26);
-    ctx.bezierCurveTo(30, -70, 60, -96, 92, -104);
-    ctx.bezierCurveTo(90, -80, 84, -60, 78, -46);
-    const scallops = [
-      [70, -34],
-      [60, -22],
-      [48, -12],
-      [34, -4],
-      [20, 0],
-    ];
-    let px = 78;
-    let py = -46;
-    for (const [x, y] of scallops) {
-      ctx.quadraticCurveTo((px + x) / 2 - 6, (py + y) / 2 + 8, x, y);
-      px = x;
-      py = y;
-    }
-    ctx.lineTo(12, -10);
-    ctx.closePath();
-    ctx.fillStyle = wing;
-    ctx.fill();
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    // covert feathers: two rows of short arcs
-    ctx.lineWidth = 2;
-    for (let row = 0; row < 2; row++) {
-      for (let i = 0; i < 4; i++) {
-        const t = (i + 0.5) / 4;
-        const x = 18 + t * (60 - row * 14);
-        const y = -30 - t * (52 - row * 6) + row * 18;
-        ctx.beginPath();
-        ctx.arc(x, y, 6, 0.2, Math.PI - 0.2);
-        ctx.stroke();
-      }
-    }
-    // primaries: long strokes toward the tip
-    for (let i = 0; i < 4; i++) {
-      ctx.beginPath();
-      ctx.moveTo(26 + i * 10, -12 - i * 6);
-      ctx.lineTo(62 + i * 7, -44 - i * 14);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-  // robe
-  ctx.fillStyle = body;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(-14, -30);
-  ctx.lineTo(14, -30);
-  ctx.bezierCurveTo(20, 10, 28, 50, 34, 78);
-  ctx.lineTo(-34, 78);
-  ctx.bezierCurveTo(-28, 50, -20, 10, -14, -30);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  // girdle and hem
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = wing;
-  ctx.beginPath();
-  ctx.moveTo(-18, 8);
-  ctx.lineTo(18, 8);
-  ctx.moveTo(-32, 70);
-  ctx.lineTo(32, 70);
-  ctx.stroke();
-  ctx.strokeStyle = line;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, 12);
-  ctx.lineTo(0, 76);
-  ctx.stroke();
-  // head
-  ctx.fillStyle = body;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(0, -44, 13, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-  ctx.restore();
-}
 
 function band(ctx: CanvasRenderingContext2D, y: number, h: number, w: number, color: string) {
   ctx.fillStyle = color;
@@ -427,10 +333,76 @@ export function sandTexture() {
   return make('sand', 512, 512, (ctx, w, h) => {
     ctx.fillStyle = '#d6b98a';
     ctx.fillRect(0, 0, w, h);
-    noise(ctx, w, h, 5000, '120,90,50', 0.18, 61, 2);
-    noise(ctx, w, h, 3000, '255,240,210', 0.2, 62, 2);
-    noise(ctx, w, h, 60, '150,120,80', 0.25, 63, 14);
-  }, [40, 40]);
+    // broad patches of lighter and darker sand
+    noise(ctx, w, h, 40, '170,130,85', 0.12, 64, 60);
+    noise(ctx, w, h, 40, '245,225,185', 0.12, 65, 60);
+    // wind ripples: short wavy crests, each with a lit face and a shadowed lee
+    const r = rng(66);
+    for (let i = 0; i < 70; i++) {
+      const x0 = r() * w;
+      const y0 = r() * h;
+      const len = 60 + r() * 120;
+      const ph = r() * 6.28;
+      for (const [dy, col] of [[0, 'rgba(255,240,210,0.22)'], [2, 'rgba(140,105,65,0.16)']] as const) {
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        for (let t = 0; t <= len; t += 6) {
+          const x = (x0 + t) % w;
+          const y = y0 + dy + Math.sin(t / 22 + ph) * 3;
+          if (t === 0 || x < 6) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    }
+    noise(ctx, w, h, 5000, '120,90,50', 0.16, 61, 2);
+    noise(ctx, w, h, 3000, '255,240,210', 0.18, 62, 2);
+    noise(ctx, w, h, 60, '150,120,80', 0.2, 63, 14);
+  }, [75, 75]);
+}
+
+/** Trodden ground: smoother, darker, packed sand with soft edges (alpha). */
+export function trodTexture() {
+  return make('trod', 256, 256, (ctx, w, h) => {
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, 'rgba(150,115,75,0)');
+    g.addColorStop(0.25, 'rgba(150,115,75,0.45)');
+    g.addColorStop(0.75, 'rgba(150,115,75,0.45)');
+    g.addColorStop(1, 'rgba(150,115,75,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    // footprints and scuffs
+    const r = rng(67);
+    for (let i = 0; i < 160; i++) {
+      const y = h * (0.2 + r() * 0.6);
+      ctx.fillStyle = `rgba(${r() < 0.5 ? '110,80,50' : '235,215,175'},0.25)`;
+      ctx.beginPath();
+      ctx.ellipse(r() * w, y, 3 + r() * 3, 1.5 + r() * 2, r() * 3, 0, 6.3);
+      ctx.fill();
+    }
+  });
+}
+
+/** Gold-overlaid board: hammered gold with darker seams at each board's edges. */
+export function boardTexture() {
+  return make('board', 128, 512, (ctx, w, h) => {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    const r = rng(73);
+    // faint vertical grain of the acacia under the gold
+    for (let i = 0; i < 40; i++) {
+      ctx.fillStyle = `rgba(120,80,20,${0.03 + r() * 0.05})`;
+      ctx.fillRect(r() * w, 0, 1 + r() * 3, h);
+    }
+    const g = ctx.createLinearGradient(0, 0, w, 0);
+    g.addColorStop(0, 'rgba(60,35,0,0.75)');
+    g.addColorStop(0.06, 'rgba(60,35,0,0.0)');
+    g.addColorStop(0.94, 'rgba(60,35,0,0.0)');
+    g.addColorStop(1, 'rgba(60,35,0,0.75)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  });
 }
 
 /** Hammered metal surface: subtle dents so toon gold doesn't look like plastic. */

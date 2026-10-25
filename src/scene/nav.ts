@@ -29,10 +29,10 @@ function staticObstacles(): { rects: Rect[]; circles: Circle[] } {
     [TENT.backX - 1.6, TENT.halfWidth, TENT.frontX + 0.2, TENT.halfWidth + 1.6],
     [TENT.backX - 1.6, -TENT.halfWidth - 1.6, TENT.backX, TENT.halfWidth + 1.6],
     // furniture (with poles)
-    [POS.ark[0] - 3.4, -1.1, POS.ark[0] + 3.4, 1.1],
+    [POS.ark[0] - 3.6, POS.ark[1] - 1.45, POS.ark[0] + 3.6, POS.ark[1] + 1.45],
     [POS.incense[0] - 1.1, -0.6, POS.incense[0] + 1.1, 0.6],
     [POS.table[0] - 2, POS.table[1] - 0.6, POS.table[0] + 2, POS.table[1] + 0.6],
-    [POS.menorah[0] - 1.3, POS.menorah[1] - 0.5, POS.menorah[0] + 1.3, POS.menorah[1] + 0.5],
+    [POS.menorah[0] - 0.5, POS.menorah[1] - 1.3, POS.menorah[0] + 0.5, POS.menorah[1] + 1.3],
     [POS.altar[0] - 4.1, -3.1, POS.altar[0] + 4.1, 3.1],
     [POS.altar[0] + 3, 3, POS.altar[0] + 4.4, 4.4], // utensils
   ];

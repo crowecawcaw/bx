@@ -9,7 +9,10 @@ import { World } from './Environment';
 import { Ark, BronzeAltar, IncenseAltar, Laver, Menorah, Table } from './Furniture';
 import { lookAt, player, Player, walkTo } from './Player';
 import { DEBUG, regionOf } from './dims';
+import { Post } from './Post';
 import { Tent } from './Tent';
+
+const POST = !new URLSearchParams(location.search).has('nopost');
 
 const CURTAIN_REACH = 14;
 
@@ -81,8 +84,8 @@ export function Scene() {
     <Canvas
       shadows
       dpr={[1, 1.75]}
-      gl={{ antialias: true, powerPreference: 'high-performance' }}
-      camera={{ fov: 70, near: 0.1, far: 3000 }}
+      gl={{ antialias: !POST, powerPreference: 'high-performance', stencil: false }}
+      camera={{ fov: 70, near: 0.2, far: 3000 }}
       onCreated={({ gl }) => {
         if (DEBUG) (window as unknown as Record<string, unknown>).__gl = gl;
         gl.toneMapping = THREE.ACESFilmicToneMapping;
@@ -108,6 +111,7 @@ export function Scene() {
         </group>
         <Bubbles />
         <Player />
+        {POST && <Post />}
       </Suspense>
     </Canvas>
   );

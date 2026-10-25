@@ -1,12 +1,12 @@
-import { Outlines } from '@react-three/drei';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { useStore } from '../store';
 import { Cloth } from './Cloth';
 import { TENT } from './dims';
-import { bronze, cloth, gold, INK, silver, toon } from './materials';
+import { bronze, cloth, gold, silver, toon } from './materials';
 import { DOOR_PILLAR_X, DOOR_PILLARS_Z, DOOR_SCREEN_X, VEIL_PILLAR_X, VEIL_PILLARS_Z } from './nav';
-import { goatHairTexture, innerCurtainTexture, needleworkTexture, skinTexture, veilTexture } from './textures';
+import { boardTexture, goatHairTexture, innerCurtainTexture, needleworkTexture, skinTexture, veilTexture } from './textures';
 
 const T = TENT.boardThickness;
 const HW = TENT.halfWidth;
@@ -137,11 +137,9 @@ function Walls() {
 
   return (
     <group userData={{ feature: 'boards' }}>
-      <instancedMesh ref={boardRef} args={[box, gold(), boardM.length]} castShadow receiveShadow>
-        <Outlines thickness={1.2} color={INK} />
+      <instancedMesh ref={boardRef} args={[box, toon('goldBoard', { color: '#f2c14e', emissive: '#4a3000', emissiveIntensity: 0.35, map: boardTexture() }), boardM.length]} castShadow receiveShadow>
       </instancedMesh>
       <instancedMesh ref={socketRef} args={[box, silver(), socketM.length]} castShadow receiveShadow>
-        <Outlines thickness={1.2} color={INK} />
       </instancedMesh>
       <instancedMesh ref={tenonRef} args={[box, toon('acaciaDark', { color: '#7a4a26' }), tenonM.length]} />
       <instancedMesh ref={ringRef} args={[ring, gold(), ringM.length]} />
@@ -348,16 +346,15 @@ function Coverings() {
   );
 }
 
+const SOCKET = new RoundedBoxGeometry(0.6, 0.5, 0.6, 2, 0.05);
+
 function GoldPillar({ x, z, socket, capital }: { x: number; z: number; socket: THREE.Material; capital: boolean }) {
   return (
     <group position={[x, 0, z]}>
-      <mesh position={[0, 0.25, 0]} material={socket} castShadow>
-        <boxGeometry args={[0.6, 0.5, 0.6]} />
-        <Outlines thickness={1.2} color={INK} />
+      <mesh position={[0, 0.25, 0]} material={socket} castShadow geometry={SOCKET}>
       </mesh>
       <mesh position={[0, TOP / 2, 0]} material={gold()} castShadow>
         <cylinderGeometry args={[0.16, 0.18, TOP, 10]} />
-        <Outlines thickness={1.2} color={INK} />
       </mesh>
       {capital && (
         <mesh position={[0, TOP - 0.2, 0]} material={gold()}>
@@ -374,7 +371,7 @@ function GoldPillar({ x, z, socket, capital }: { x: number; z: number; socket: T
 
 export function Tent() {
   const open = useStore((s) => s.open);
-  const doorMat = useMemo(() => cloth('door', needleworkTexture('doorTex', 1024, 1024, 5)), []);
+  const doorMat = useMemo(() => cloth('door', needleworkTexture('doorTex', 1024, 1024, 5), 1.2, 0.04), []);
   const veilMat = useMemo(() => cloth('veil', veilTexture()), []);
   return (
     <group>

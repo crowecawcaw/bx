@@ -1,8 +1,10 @@
 import { useFrame } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { toon, toonRamp } from './materials';
-import { sandTexture } from './textures';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { COURT } from './dims';
+import { toon, toonRamp, windTime } from './materials';
+import { sandTexture, trodTexture } from './textures';
 
 function SkyDome() {
   const mat = useMemo(
@@ -211,9 +213,12 @@ function CloudPillar() {
           vec3 n = vec3(p, sqrt(1.0 - r2));
           float l = dot(n, normalize(vec3(0.35, 0.8, 0.5)));
           vec3 col = l > 0.6 ? vec3(1.0, 0.995, 0.97) : l > 0.2 ? vec3(0.91, 0.89, 0.84) : vec3(0.78, 0.75, 0.69);
-          if (r2 > 0.92) col = vec3(0.7, 0.67, 0.6);
-          gl_FragColor = vec4(col, 1.0);
+          float a = 1.0 - smoothstep(0.35, 1.0, r2);
+          gl_FragColor = vec4(col, a * 0.92);
         }`,
+      // soft puffs that blend into each other; no depth writes, so the ink pass leaves them alone
+      transparent: true,
+      depthWrite: false,
     });
     return { geo: g, mat };
   }, []);
@@ -227,17 +232,114 @@ function CloudPillar() {
   );
 }
 
+/** Worn ground: the path from the camp to the gate, and the trodden floor of the court. */
+function Trodden() {
+  const mat = useMemo(() => {
+    const m = toon('trod', { map: trodTexture(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+    return m;
+  }, []);
+  const courtMat = useMemo(
+    () => toon('courtFloor', { color: '#b9936a', transparent: true, opacity: 0.35, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
+    [],
+  );
+  const len = 260;
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[COURT.maxX + len / 2, 0.01, 0]} material={mat} receiveShadow>
+        <planeGeometry args={[len, 22]} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]} material={courtMat} receiveShadow>
+        <planeGeometry args={[COURT.maxX - COURT.minX, COURT.maxZ - COURT.minZ]} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Scattered stones and broom bushes (retem) across the wilderness floor. */
+function Scatter() {
+  const stones = useRef<THREE.InstancedMesh>(null);
+  const bushes = useRef<THREE.InstancedMesh>(null);
+  const { stoneM, bushM } = useMemo(() => {
+    let s = 21;
+    const rnd = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+    const free = (x: number, z: number) => {
+      const inCourt = x > COURT.minX - 4 && x < COURT.maxX + 4 && z > COURT.minZ - 4 && z < COURT.maxZ + 4;
+      const onPath = x > COURT.maxX && Math.abs(z) < 12;
+      return !inCourt && !onPath;
+    };
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const stoneM: THREE.Matrix4[] = [];
+    const bushM: THREE.Matrix4[] = [];
+    while (stoneM.length < 500) {
+      const a = rnd() * Math.PI * 2;
+      const d = 52 + Math.pow(rnd(), 1.5) * 280;
+      const x = Math.cos(a) * d * 1.15;
+      const z = Math.sin(a) * d;
+      if (!free(x, z)) continue;
+      const k = 0.32 + Math.pow(rnd(), 3) * 0.8;
+      q.setFromEuler(e.set(rnd() * 3, rnd() * 3, rnd() * 3));
+      stoneM.push(m.clone().compose(new THREE.Vector3(x, k * 0.2, z), q, new THREE.Vector3(k * (1 + rnd()), k * 0.6, k)));
+    }
+    while (bushM.length < 160) {
+      const a = rnd() * Math.PI * 2;
+      const d = 55 + rnd() * 260;
+      const x = Math.cos(a) * d * 1.15;
+      const z = Math.sin(a) * d;
+      if (!free(x, z)) continue;
+      const k = 0.6 + rnd() * 0.9;
+      q.setFromEuler(e.set(0, rnd() * 6, 0));
+      bushM.push(m.clone().compose(new THREE.Vector3(x, k * 0.35, z), q, new THREE.Vector3(k * 1.3, k * 0.8, k * 1.1)));
+    }
+    return { stoneM, bushM };
+  }, []);
+  useLayoutEffect(() => {
+    stoneM.forEach((m, i) => stones.current!.setMatrixAt(i, m));
+    bushM.forEach((m, i) => bushes.current!.setMatrixAt(i, m));
+    stones.current!.instanceMatrix.needsUpdate = true;
+    bushes.current!.instanceMatrix.needsUpdate = true;
+    stones.current!.computeBoundingSphere();
+    bushes.current!.computeBoundingSphere();
+  }, [stoneM, bushM]);
+  const stoneGeo = useMemo(() => new THREE.DodecahedronGeometry(1, 0), []);
+  const bushGeo = useMemo(() => {
+    // a clump of three lumps
+    const parts = [
+      [0, 0, 0, 1],
+      [0.7, -0.1, 0.3, 0.7],
+      [-0.6, -0.15, -0.2, 0.75],
+    ].map(([x, y, z, r]) => new THREE.IcosahedronGeometry(r, 0).translate(x, y, z));
+    return mergeGeometries(parts)!;
+  }, []);
+  return (
+    <group>
+      <instancedMesh ref={stones} args={[stoneGeo, toon('stone', { color: '#a08468' }), stoneM.length]} castShadow receiveShadow />
+      <instancedMesh ref={bushes} args={[bushGeo, toon('bush', { color: '#7f8a58' }), bushM.length]} castShadow receiveShadow />
+    </group>
+  );
+}
+
+function Wind() {
+  useFrame(({ clock }) => {
+    windTime.value = clock.elapsedTime;
+  });
+  return null;
+}
+
 export function World() {
   const ground = useMemo(() => toon('ground', { map: sandTexture() }), []);
   return (
     <>
       <SkyDome />
       <fog attach="fog" args={['#ecdcc0', 220, 1400]} />
-      <hemisphereLight args={['#dfe9f5', '#a57d55', 0.85]} />
+      {/* cool sky fill, so shadows read blue-violet against the warm sun */}
+      <hemisphereLight args={['#a9b6e8', '#c49460', 1.0]} />
+      {/* a low morning sun from the east-southeast, for long shadows */}
       <directionalLight
-        position={[60, 90, 45]}
-        intensity={2.1}
-        color="#fff3dc"
+        position={[75, 50, 42]}
+        intensity={2.5}
+        color="#ffdcae"
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-70}
@@ -252,6 +354,9 @@ export function World() {
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow material={ground} userData={{ ground: true }}>
         <planeGeometry args={[3000, 3000]} />
       </mesh>
+      <Trodden />
+      <Scatter />
+      <Wind />
       <Mountains />
       <Camp />
       <CloudPillar />

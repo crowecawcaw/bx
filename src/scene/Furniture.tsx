@@ -1,30 +1,39 @@
-import { Outlines } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { POS } from './dims';
-import { bronze, gold, INK, pureGold, toon } from './materials';
+import { bronze, gold, pureGold, toon } from './materials';
+import { Cherub } from './Cherub';
 import { netTexture } from './textures';
 
-const Ink = ({ t = 1.3 }: { t?: number }) => <Outlines thickness={t} color={INK} />;
+const boxes = new Map<string, THREE.BufferGeometry>();
+/** Boxes with a slight bevel, so edges catch the light like worked wood and metal. */
+function rounded(s: [number, number, number]) {
+  const key = s.join();
+  let g = boxes.get(key);
+  if (!g) {
+    g = new RoundedBoxGeometry(s[0], s[1], s[2], 2, Math.min(0.05, Math.min(...s) * 0.2));
+    boxes.set(key, g);
+  }
+  return g;
+}
 
 function Box({
   p,
   s,
   m,
-  outline = true,
   r,
 }: {
   p: [number, number, number];
   s: [number, number, number];
   m: THREE.Material;
-  outline?: boolean;
   r?: [number, number, number];
 }) {
   return (
     <mesh position={p} rotation={r} material={m} castShadow receiveShadow>
-      <boxGeometry args={s} />
-      {outline && <Ink />}
+      <primitive object={rounded(s)} attach="geometry" />
     </mesh>
   );
 }
@@ -33,7 +42,6 @@ function Pole({ p, len, m, axis = 'x', r = 0.05 }: { p: [number, number, number]
   return (
     <mesh position={p} rotation={axis === 'x' ? [0, 0, Math.PI / 2] : [Math.PI / 2, 0, 0]} material={m} castShadow>
       <cylinderGeometry args={[r, r, len, 8]} />
-      <Ink t={1} />
     </mesh>
   );
 }
@@ -50,74 +58,15 @@ function Ring({ p, m, axis = 'x', r = 0.1 }: { p: [number, number, number]; m: T
 function Frame({ y, sx, sz, h, t, m }: { y: number; sx: number; sz: number; h: number; t: number; m: THREE.Material }) {
   return (
     <group position={[0, y, 0]}>
-      <Box p={[0, 0, sz / 2 - t / 2]} s={[sx, h, t]} m={m} outline={false} />
-      <Box p={[0, 0, -sz / 2 + t / 2]} s={[sx, h, t]} m={m} outline={false} />
-      <Box p={[sx / 2 - t / 2, 0, 0]} s={[t, h, sz - 2 * t]} m={m} outline={false} />
-      <Box p={[-sx / 2 + t / 2, 0, 0]} s={[t, h, sz - 2 * t]} m={m} outline={false} />
+      <Box p={[0, 0, sz / 2 - t / 2]} s={[sx, h, t]} m={m} />
+      <Box p={[0, 0, -sz / 2 + t / 2]} s={[sx, h, t]} m={m} />
+      <Box p={[sx / 2 - t / 2, 0, 0]} s={[t, h, sz - 2 * t]} m={m} />
+      <Box p={[-sx / 2 + t / 2, 0, 0]} s={[t, h, sz - 2 * t]} m={m} />
     </group>
   );
 }
 
 // ───────────────────────── Ark & mercy seat (Ex 25:10-22) ─────────────────────────
-
-function wingGeometry() {
-  const s = new THREE.Shape();
-  s.moveTo(0, 0);
-  s.bezierCurveTo(-0.12, 0.4, 0.05, 0.85, 0.42, 1.0);
-  s.bezierCurveTo(0.65, 1.07, 0.88, 1.02, 1.0, 0.95);
-  // scalloped trailing edge: primary feathers
-  const tips = [
-    [0.86, 0.84],
-    [0.72, 0.72],
-    [0.58, 0.58],
-    [0.44, 0.42],
-    [0.3, 0.25],
-  ];
-  let prev: [number, number] = [1.0, 0.95];
-  for (const [x, y] of tips) {
-    s.quadraticCurveTo((prev[0] + x) / 2 + 0.05, (prev[1] + y) / 2 - 0.08, x, y);
-    prev = [x, y];
-  }
-  s.quadraticCurveTo(0.18, 0.08, 0.1, 0.0);
-  s.closePath();
-  return new THREE.ExtrudeGeometry(s, { depth: 0.035, bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.012, bevelSegments: 1 });
-}
-
-/** Kneeling cherub facing +x, wings raised forward over the mercy seat (Ex 25:20). */
-function Cherub() {
-  const wing = useMemo(wingGeometry, []);
-  const m = pureGold();
-  return (
-    <group>
-      {/* robe, kneeling */}
-      <mesh position={[0, 0.24, 0]} material={m} castShadow>
-        <cylinderGeometry args={[0.11, 0.2, 0.48, 12]} />
-        <Ink />
-      </mesh>
-      <mesh position={[0.1, 0.06, 0]} material={m}>
-        <boxGeometry args={[0.32, 0.12, 0.3]} />
-        <Ink />
-      </mesh>
-      {/* head bowed toward the mercy seat */}
-      <mesh position={[0.06, 0.56, 0]} material={m} castShadow>
-        <sphereGeometry args={[0.1, 14, 10]} />
-        <Ink />
-      </mesh>
-      {/* arms reaching forward */}
-      <mesh position={[0.16, 0.36, 0]} rotation={[0, 0, -1.1]} material={m}>
-        <capsuleGeometry args={[0.035, 0.22, 3, 6]} />
-      </mesh>
-      {/* wings from the shoulders, stretched forward and on high */}
-      {[1, -1].map((side) => (
-        <group key={side} position={[-0.02, 0.42, side * 0.12]} rotation={[side * -0.28, 0, -0.18]}>
-          <mesh geometry={wing} material={m} scale={[1.0, 0.75, side]} castShadow>
-            <Ink t={1} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  );
-}
 
 export function Ark() {
   const g = gold();
@@ -126,7 +75,9 @@ export function Ark() {
   const H = 1.5;
   const foot = 0.12;
   return (
-    <group position={[POS.ark[0], 0, POS.ark[1]]} userData={{ feature: 'ark' }}>
+    // Length runs north–south and the poles east–west, so from the door you face the long side
+    // and see both cherubim; the pole ends press toward the veil (1 Kgs 8:8; Rashi on Ex 25:12).
+    <group position={[POS.ark[0], 0, POS.ark[1]]} rotation={[0, Math.PI / 2, 0]} userData={{ feature: 'ark' }}>
       {/* four feet */}
       {[
         [1, 1],
@@ -141,12 +92,12 @@ export function Ark() {
       {/* crown of gold round about */}
       <Frame y={H - 0.1} sx={L + 0.08} sz={W + 0.08} h={0.1} t={0.05} m={pureGold()} />
       <Frame y={0.45} sx={L + 0.04} sz={W + 0.04} h={0.05} t={0.03} m={pureGold()} />
-      {/* rings at the four feet, two on each side; poles never removed (Ex 25:12-15) */}
-      {[1, -1].flatMap((sz) =>
-        [1, -1].map((sx) => <Ring key={`${sx}${sz}`} p={[sx * (L / 2 - 0.35), 0.32, sz * (W / 2 + 0.08)]} m={g} />),
+      {/* rings at the four feet, two on each end; poles never removed (Ex 25:12-15) */}
+      {[1, -1].flatMap((sx) =>
+        [1, -1].map((sz) => <Ring key={`${sx}${sz}`} axis="z" p={[sx * (L / 2 + 0.08), 0.32, sz * (W / 2 - 0.3)]} m={g} />),
       )}
-      {[1, -1].map((sz) => (
-        <Pole key={sz} p={[0, 0.32, sz * (W / 2 + 0.08)]} len={7} m={g} />
+      {[1, -1].map((sx) => (
+        <Pole key={sx} axis="z" p={[sx * (L / 2 + 0.08), 0.32, 0]} len={7} m={g} />
       ))}
       {/* mercy seat of pure gold, 2½ x 1½ (Ex 25:17) */}
       <Box p={[0, H + 0.06, 0]} s={[L, 0.12, W]} m={pureGold()} />
@@ -201,7 +152,6 @@ export function Table() {
           {Array.from({ length: 6 }, (_, i) => (
             <mesh key={i} position={[0, 0.06 + i * 0.11, 0]} material={bread} castShadow>
               <cylinderGeometry args={[0.36, 0.38, 0.1, 18]} />
-              <Ink t={1} />
             </mesh>
           ))}
           <mesh position={[0, 0.76, 0]} material={pureGold()}>
@@ -215,7 +165,6 @@ export function Table() {
       {/* dishes, spoons (pans), flagons and bowls of pure gold (Ex 25:29) */}
       <mesh position={[0.92, H + 0.14, 0.36]} material={pureGold()}>
         <cylinderGeometry args={[0.05, 0.08, 0.2, 10]} />
-        <Ink t={1} />
       </mesh>
       <mesh position={[-0.92, H + 0.06, -0.36]} material={pureGold()}>
         <cylinderGeometry args={[0.1, 0.07, 0.05, 12]} />
@@ -228,23 +177,6 @@ export function Table() {
 }
 
 // ───────────────────────── Golden lampstand (Ex 25:31-40) ─────────────────────────
-
-/** Almond-blossom bowl (gavia), knop (kaftor) and flower (perach). */
-function Cup({ p, m }: { p: THREE.Vector3; m: THREE.Material }) {
-  return (
-    <group position={p}>
-      <mesh position={[0, -0.05, 0]} material={m}>
-        <sphereGeometry args={[0.05, 8, 6]} />
-      </mesh>
-      <mesh position={[0, 0.03, 0]} material={m}>
-        <cylinderGeometry args={[0.07, 0.025, 0.08, 8]} />
-      </mesh>
-      <mesh position={[0, 0.09, 0]} material={m}>
-        <cylinderGeometry args={[0.055, 0.04, 0.03, 8]} />
-      </mesh>
-    </group>
-  );
-}
 
 function Flame({ p }: { p: [number, number, number] }) {
   const ref = useRef<THREE.Mesh>(null);
@@ -261,78 +193,177 @@ function Flame({ p }: { p: [number, number, number] }) {
   );
 }
 
+/** A tube along a curve that tapers from r0 to r1, like a growing stem. */
+function taperedTube(curve: THREE.Curve<THREE.Vector3>, r0: number, r1: number, segs = 32, radial = 10) {
+  const g = new THREE.TubeGeometry(curve, segs, 1, radial, false);
+  const p = g.attributes.position as THREE.BufferAttribute;
+  const c = new THREE.Vector3();
+  const v = new THREE.Vector3();
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs;
+    curve.getPointAt(t, c);
+    const r = r0 + (r1 - r0) * t;
+    for (let j = 0; j <= radial; j++) {
+      const k = i * (radial + 1) + j;
+      v.fromBufferAttribute(p, k).sub(c).multiplyScalar(r).add(c);
+      p.setXYZ(k, v.x, v.y, v.z);
+    }
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+/** Lathe from (radius, y) pairs, smoothed through a spline. */
+function lathe(pts: [number, number][], seg = 14, div = 24) {
+  const spline = new THREE.SplineCurve(pts.map(([x, y]) => new THREE.Vector2(x, y)));
+  return new THREE.LatheGeometry(spline.getPoints(div), seg);
+}
+
+/**
+ * One "cup made like an almond, a knop and a flower" (Ex 25:33): a round knop (bud),
+ * an almond-shaped cup above it, and five petals opening at the rim. Axis +y, origin at the knop.
+ */
+function blossomGeometry() {
+  const knop = lathe([[0.001, -0.07], [0.045, -0.055], [0.062, -0.02], [0.05, 0.015], [0.022, 0.03]]);
+  const cup = lathe([[0.02, 0.03], [0.04, 0.06], [0.055, 0.1], [0.05, 0.14], [0.06, 0.155]]);
+  const petals: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    const petal = new THREE.SphereGeometry(0.045, 8, 6);
+    petal.scale(0.55, 1, 0.22);
+    petal.translate(0, 0.04, 0);
+    petal.rotateX(-0.75); // flare outward
+    petal.translate(0, 0.14, 0.04);
+    petal.rotateY(a);
+    petals.push(petal);
+  }
+  const strip = (g: THREE.BufferGeometry) => {
+    const n = g.index ? g.toNonIndexed() : g;
+    n.deleteAttribute('uv');
+    return n;
+  };
+  const merged = mergeGeometries([knop, cup, ...petals].map(strip))!;
+  merged.computeVertexNormals();
+  return merged;
+}
+
+function OilLamp({ p, m }: { p: [number, number, number]; m: THREE.Material }) {
+  // a small bowl with a pinched spout toward the front (-z), "to give light over against it" (Ex 25:37)
+  const geo = useMemo(() => {
+    const g = lathe([[0.012, 0], [0.07, 0.015], [0.085, 0.045], [0.07, 0.065]], 16);
+    g.scale(1, 1, 1.25);
+    return g;
+  }, []);
+  return (
+    <group position={p}>
+      <mesh geometry={geo} material={m} castShadow />
+      <mesh position={[0, 0.055, -0.1]} rotation={[-1.2, 0, 0]} material={m}>
+        <coneGeometry args={[0.03, 0.09, 8, 1, true]} />
+      </mesh>
+      <Flame p={[0, 0.13, -0.125]} />
+    </group>
+  );
+}
+
+/**
+ * The lampstand, of one beaten piece (Ex 25:31-40): a tapering shaft, six branches that sweep
+ * out of its sides like almond boughs, almond blossoms along every branch, standing on three feet.
+ * Its front (lamps and light) faces local -z; the parent turns it to face the entrance.
+ */
 export function Menorah() {
   const m = pureGold();
   const H = 3; // not specified in Scripture; tradition gives 18 handbreadths
-  const radii = [0.35, 0.7, 1.05];
+  const radii = [0.36, 0.7, 1.04];
   const light = useRef<THREE.PointLight>(null);
+  const blossoms = useRef<THREE.InstancedMesh>(null);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
     if (light.current) light.current.intensity = 9 + Math.sin(t * 7) * 0.6 + Math.sin(t * 13) * 0.4;
   });
-  const branches = useMemo(
-    () =>
-      radii.flatMap((r) =>
-        [1, -1].map((side) => {
-          const pts: THREE.Vector3[] = [];
-          for (let i = 0; i <= 16; i++) {
-            const t = (Math.PI / 2) * (i / 16);
-            pts.push(new THREE.Vector3(side * r * Math.sin(t), H - r * Math.cos(t), 0));
-          }
-          const curve = new THREE.CatmullRomCurve3(pts);
-          const cups = [0.35, 0.62, 0.88].map((u) => curve.getPointAt(u));
-          return { geom: new THREE.TubeGeometry(curve, 24, 0.035, 8), cups, tip: [side * r, H, 0] as [number, number, number] };
-        }),
-      ),
+
+  const parts = useMemo(() => {
+    const up = new THREE.Vector3(0, 1, 0);
+    const bloomAt: THREE.Matrix4[] = [];
+    const place = (p: THREE.Vector3, dir: THREE.Vector3, s = 1) =>
+      bloomAt.push(new THREE.Matrix4().compose(p, new THREE.Quaternion().setFromUnitVectors(up, dir.clone().normalize()), new THREE.Vector3(s, s, s)));
+
+    // shaft: a slender stem that swells gently at the joints
+    const shaft = lathe(
+      [[0.075, 0.42], [0.06, 0.9], [0.052, 1.6], [0.05, 2.2], [0.046, 2.7], [0.042, H - 0.1]],
+      12,
+      30,
+    );
+    shaft.translate(0, 0, 0);
+
+    // three curved legs (Rashi: the base stood on three feet)
+    const legs = [0, 1, 2].map((i) => {
+      const a = (i / 3) * Math.PI * 2 + Math.PI / 2;
+      const d = new THREE.Vector3(Math.cos(a), 0, Math.sin(a));
+      const curve = new THREE.CubicBezierCurve3(
+        new THREE.Vector3(0, 0.5, 0),
+        d.clone().multiplyScalar(0.08).setY(0.3),
+        d.clone().multiplyScalar(0.34).setY(0.2),
+        d.clone().multiplyScalar(0.42).setY(0.03),
+      );
+      return { geo: taperedTube(curve, 0.06, 0.035, 20, 8), foot: d.clone().multiplyScalar(0.44).setY(0.03) };
+    });
+
+    // six branches out of the sides, three on each side (Ex 25:32)
+    const branches = radii.flatMap((r) =>
+      [1, -1].map((side) => {
+        const yb = H - r * 1.08;
+        const curve = new THREE.CubicBezierCurve3(
+          new THREE.Vector3(0, yb, 0),
+          new THREE.Vector3(side * r * 0.62, yb + r * 0.02, 0),
+          new THREE.Vector3(side * r, yb + r * 0.3, 0),
+          new THREE.Vector3(side * r, H - 0.12, 0),
+        );
+        // three almond blossoms along each branch (Ex 25:33)
+        for (const u of [0.38, 0.62, 0.84]) place(curve.getPointAt(u), curve.getTangentAt(u), 0.95);
+        return { geo: taperedTube(curve, 0.042, 0.03, 36, 10), tip: [side * r, H - 0.12, 0] as [number, number, number], yb };
+      }),
+    );
+    // four on the shaft (Ex 25:34), clear of the branch joints
+    for (const y of [0.95, 1.5, 2.08, 2.46]) place(new THREE.Vector3(0, y, 0), up, 1.15);
+    // a knop under each pair of branches (Ex 25:35)
+    const knops = radii.map((r) => H - r * 1.08);
+    return { shaft, legs, branches, bloomAt, knops, knop: lathe([[0.001, -0.06], [0.07, -0.035], [0.08, 0.0], [0.065, 0.04], [0.001, 0.06]]) };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-  const lampTops: [number, number, number][] = [[0, H, 0], ...branches.map((b) => b.tip)];
+  }, []);
+  const blossomGeo = useMemo(blossomGeometry, []);
+  useLayoutEffect(() => {
+    parts.bloomAt.forEach((mx, i) => blossoms.current!.setMatrixAt(i, mx));
+    blossoms.current!.instanceMatrix.needsUpdate = true;
+    blossoms.current!.computeBoundingSphere();
+  }, [parts]);
+
+  const lampTops: [number, number, number][] = [[0, H - 0.12, 0], ...parts.branches.map((b) => b.tip)];
   return (
-    <group position={[POS.menorah[0], 0, POS.menorah[1]]} userData={{ feature: 'menorah' }}>
-      {/* base and shaft */}
-      <mesh position={[0, 0.1, 0]} material={m} castShadow>
-        <cylinderGeometry args={[0.22, 0.38, 0.2, 16]} />
-        <Ink />
-      </mesh>
-      <mesh position={[0, H / 2, 0]} material={m} castShadow>
-        <cylinderGeometry args={[0.045, 0.06, H, 10]} />
-        <Ink t={1} />
-      </mesh>
-      {/* knops under each pair of branches (Ex 25:35) */}
-      {radii.map((r) => (
-        <mesh key={r} position={[0, H - r, 0]} material={m}>
-          <sphereGeometry args={[0.08, 10, 8]} />
-        </mesh>
-      ))}
-      {/* four bowls on the shaft (Ex 25:34) */}
-      {[0.9, H - 0.88, H - 0.52, H - 0.18].map((y) => (
-        <Cup key={y} p={new THREE.Vector3(0, y, 0)} m={m} />
-      ))}
-      {/* six branches, three bowls each (Ex 25:32-33) */}
-      {branches.map((b, i) => (
+    <group position={[POS.menorah[0], 0, POS.menorah[1]]} rotation={[0, -Math.PI / 2, 0]} userData={{ feature: 'menorah' }}>
+      <mesh geometry={parts.shaft} material={m} castShadow />
+      {parts.legs.map((l, i) => (
         <group key={i}>
-          <mesh geometry={b.geom} material={m} castShadow>
-            <Ink t={1} />
+          <mesh geometry={l.geo} material={m} castShadow />
+          <mesh position={l.foot} scale={[1.3, 0.5, 1.3]} material={m}>
+            <sphereGeometry args={[0.05, 10, 6]} />
           </mesh>
-          {b.cups.map((c, k) => (
-            <Cup key={k} p={c} m={m} />
-          ))}
         </group>
       ))}
+      <mesh position={[0, 0.5, 0]} geometry={parts.knop} material={m} castShadow />
+      {parts.knops.map((y) => (
+        <mesh key={y} position={[0, y, 0]} geometry={parts.knop} material={m} castShadow />
+      ))}
+      {parts.branches.map((b, i) => (
+        <mesh key={i} geometry={b.geo} material={m} castShadow />
+      ))}
+      <instancedMesh ref={blossoms} args={[blossomGeo, m, parts.bloomAt.length]} castShadow />
       {/* seven lamps, burning pure olive oil (Ex 25:37; Lev 24:2) */}
       {lampTops.map((p, i) => (
-        <group key={i}>
-          <mesh position={[p[0], p[1] + 0.04, p[2]]} scale={[1.3, 0.55, 0.9]} material={m}>
-            <sphereGeometry args={[0.08, 10, 8]} />
-            <Ink t={1} />
-          </mesh>
-          <Flame p={[p[0], p[1] + 0.17, p[2] - 0.03]} />
-        </group>
+        <OilLamp key={i} p={p} m={m} />
       ))}
       <pointLight ref={light} position={[0, H + 0.4, -0.6]} color="#ffbe6a" intensity={9} distance={30} decay={1.3} />
       {/* tongs and snuff dishes (Ex 25:38) */}
-      <mesh position={[0.5, 0.03, 0.2]} material={m}>
+      <mesh position={[0.5, 0.03, -0.3]} material={m}>
         <cylinderGeometry args={[0.1, 0.08, 0.04, 10]} />
       </mesh>
     </group>
@@ -386,7 +417,6 @@ export function IncenseAltar() {
       ].map(([sx, sz], i) => (
         <mesh key={i} position={[sx * 0.42, H + 0.08, sz * 0.42]} material={g}>
           <boxGeometry args={[0.14, 0.16, 0.14]} />
-          <Ink t={1} />
         </mesh>
       ))}
       {/* two rings under the crown on two sides, poles of acacia overlaid with gold (Ex 30:4-5) */}
@@ -442,7 +472,6 @@ export function BronzeAltar() {
       ].map(([sx, sz], i) => (
         <mesh key={i} position={[sx * (S / 2 - 0.2), H + 0.18, sz * (S / 2 - 0.2)]} material={b} castShadow>
           <coneGeometry args={[0.2, 0.42, 4]} />
-          <Ink t={1} />
         </mesh>
       ))}
       {/* the ledge (compass) halfway up, and the bronze network beneath it (Ex 27:4-5) */}
@@ -495,7 +524,6 @@ export function BronzeAltar() {
       <group position={[S / 2 + 1.1, 0, 3.4]}>
         <mesh position={[0, 0.25, 0]} material={b} castShadow>
           <cylinderGeometry args={[0.35, 0.25, 0.5, 12]} />
-          <Ink t={1} />
         </mesh>
         <mesh position={[0.8, 0.05, 0.2]} rotation={[0, 0.6, 0]} material={b}>
           <boxGeometry args={[0.5, 0.05, 0.35]} />
@@ -549,10 +577,8 @@ export function Laver() {
   return (
     <group position={[POS.laver[0], 0, POS.laver[1]]} userData={{ feature: 'laver' }}>
       <mesh geometry={foot} material={b} castShadow>
-        <Ink />
       </mesh>
       <mesh geometry={bowl} material={b} castShadow>
-        <Ink />
       </mesh>
       <mesh position={[0, 2.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[1.22, 28]} />
