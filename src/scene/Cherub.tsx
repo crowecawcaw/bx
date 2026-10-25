@@ -120,12 +120,12 @@ function egg(front: number, back: number, side: number, th: number): [number, nu
 
 /** Robe from the pooled hem to the neck: kneeling mound in front, S-curve up the back. */
 function robe() {
-  const spine = new THREE.CatmullRomCurve3([V(-0.03, 0, 0), V(-0.05, 0.16, 0), V(-0.04, 0.34, 0), V(0.02, 0.5, 0), V(0.08, 0.61, 0), V(0.12, 0.69, 0)]);
-  const front = table([[0, 0.31], [0.07, 0.31], [0.17, 0.25], [0.27, 0.13], [0.42, 0.1], [0.6, 0.12], [0.76, 0.09], [0.9, 0.05], [1, 0.042]]);
-  const back = table([[0, 0.2], [0.08, 0.17], [0.25, 0.14], [0.42, 0.1], [0.6, 0.1], [0.76, 0.095], [0.9, 0.045], [1, 0.04]]);
-  const side = table([[0, 0.2], [0.1, 0.175], [0.27, 0.15], [0.42, 0.115], [0.6, 0.14], [0.75, 0.155], [0.87, 0.07], [1, 0.042]]);
+  const spine = new THREE.CatmullRomCurve3([V(-0.05, 0, 0), V(-0.07, 0.17, 0), V(-0.04, 0.33, 0), V(0.04, 0.46, 0), V(0.13, 0.555, 0), V(0.2, 0.615, 0)]);
+  const front = table([[0, 0.36], [0.08, 0.35], [0.2, 0.27], [0.3, 0.15], [0.45, 0.11], [0.62, 0.12], [0.8, 0.1], [0.92, 0.06], [1, 0.05]]);
+  const back = table([[0, 0.17], [0.1, 0.16], [0.3, 0.14], [0.48, 0.11], [0.68, 0.11], [0.85, 0.1], [0.95, 0.06], [1, 0.05]]);
+  const side = table([[0, 0.21], [0.12, 0.19], [0.3, 0.155], [0.48, 0.12], [0.68, 0.14], [0.84, 0.16], [0.95, 0.08], [1, 0.05]]);
   // folds: soft ridges that spiral back as they fall to the hem, strongest at the hem
-  const foldAmp = table([[0, 0.1], [0.15, 0.07], [0.3, 0.035], [0.42, 0.0], [0.55, 0.02], [0.75, 0.0], [1, 0]]);
+  const foldAmp = table([[0, 0.1], [0.15, 0.07], [0.32, 0.03], [0.48, 0.0], [0.62, 0.02], [0.8, 0.0], [1, 0]]);
   const g = sweep(48, 40, curveFrames(spine, V(1, 0, 0)), (t, th) => {
     const [a, b] = egg(front(t), back(t), side(t), th);
     const fold = 1 + foldAmp(t) * Math.sin(7 * th + 3.2 * (1 - t) * Math.sign(Math.sin(th)) + 0.4);
@@ -143,11 +143,11 @@ function clampFloor(g: THREE.BufferGeometry) {
 
 /** Head bowed toward the mercy seat, with a hint of brow, nose and chin in profile. */
 function head() {
-  const axis = new THREE.CatmullRomCurve3([V(0.11, 0.645, 0), V(0.16, 0.735, 0), V(0.215, 0.835, 0)]);
-  const r = table([[0, 0.0], [0.08, 0.045], [0.3, 0.074], [0.55, 0.08], [0.8, 0.068], [0.95, 0.035], [1, 0.0]]);
+  const axis = new THREE.CatmullRomCurve3([V(0.18, 0.6, 0), V(0.245, 0.655, 0), V(0.32, 0.72, 0)]);
+  const r = table([[0, 0.0], [0.08, 0.05], [0.3, 0.078], [0.55, 0.085], [0.8, 0.072], [0.95, 0.038], [1, 0.0]]);
   const face = table([[0, 0], [0.18, 0.012], [0.3, 0.0], [0.42, 0.012], [0.5, 0.02], [0.58, 0.004], [0.66, 0.012], [0.8, 0], [1, 0]]);
   // frame n points to the face: forward and down from the tilted axis
-  return sweep(22, 24, curveFrames(axis, V(1, -0.3, 0)), (t, th) => {
+  return sweep(22, 24, curveFrames(axis, V(0.7, -0.7, 0)), (t, th) => {
     const c = Math.cos(th);
     const s = Math.sin(th);
     const rr = r(t) * (c < 0 ? 1.12 : 1) + face(t) * Math.exp(-((th > Math.PI ? th - 2 * Math.PI : th) ** 2) * 18);
@@ -161,12 +161,12 @@ function hair() {
   for (const k of [-1, 0, 1]) {
     const z = k * 0.035;
     const c = new THREE.CatmullRomCurve3([
-      V(0.2, 0.845, z * 0.5),
-      V(0.13, 0.865, z),
-      V(0.05, 0.82, z * 1.4),
-      V(-0.01, 0.73, z * 1.7),
-      V(-0.04, 0.63, z * 1.5),
-      V(-0.04 - Math.abs(k) * 0.01, 0.5 - Math.abs(k) * 0.03, z),
+      V(0.335, 0.735, z * 0.5),
+      V(0.275, 0.77, z),
+      V(0.19, 0.75, z * 1.4),
+      V(0.12, 0.69, z * 1.7),
+      V(0.06, 0.635, z * 1.6),
+      V(0.0 - Math.abs(k) * 0.02, 0.6 - Math.abs(k) * 0.02, z * 1.2),
     ]);
     const w = table([[0, 0.025], [0.25, 0.04], [0.6, 0.035], [1, 0.0]]);
     parts.push(sweep(28, 10, curveFrames(c, V(0, 0, 1)), (t, th) => [Math.cos(th) * w(t) * 1.1, Math.sin(th) * w(t) * 0.45 - 0.005]));
@@ -177,12 +177,12 @@ function hair() {
 /** Arm in a full sleeve that hangs from the forearm; hands meet before the breast. */
 function arm(side: number) {
   const c = new THREE.CatmullRomCurve3([
-    V(0.035, 0.585, side * 0.115),
-    V(0.04, 0.5, side * 0.15),
-    V(0.085, 0.43, side * 0.145),
-    V(0.17, 0.47, side * 0.08),
-    V(0.225, 0.535, side * 0.02),
-    V(0.245, 0.575, side * 0.012),
+    V(0.11, 0.57, side * 0.13),
+    V(0.12, 0.48, side * 0.165),
+    V(0.16, 0.41, side * 0.15),
+    V(0.25, 0.45, side * 0.08),
+    V(0.3, 0.5, side * 0.02),
+    V(0.32, 0.54, side * 0.012),
   ]);
   const rn = table([[0, 0.045], [0.25, 0.04], [0.5, 0.05], [0.68, 0.075], [0.76, 0.06], [0.8, 0.026], [0.93, 0.022], [1, 0.0]]);
   const rb = table([[0, 0.045], [0.25, 0.038], [0.5, 0.04], [0.68, 0.045], [0.76, 0.045], [0.8, 0.02], [0.93, 0.014], [1, 0.0]]);
@@ -220,20 +220,20 @@ function feather(base: THREE.Vector3, dir: THREE.Vector3, along: THREE.Vector3, 
 function wing(side: number) {
   const parts: THREE.BufferGeometry[] = [];
   const edge = new THREE.CatmullRomCurve3([
-    V(-0.07, 0.56, side * 0.08),
-    V(-0.15, 0.71, side * 0.19),
-    V(-0.12, 0.9, side * 0.3),
-    V(0.04, 1.02, side * 0.36),
-    V(0.3, 1.055, side * 0.35),
-    V(0.56, 1.02, side * 0.3),
-    V(0.72, 0.97, side * 0.25),
+    V(0.0, 0.61, side * 0.09),
+    V(-0.12, 0.75, side * 0.22),
+    V(-0.11, 0.92, side * 0.34),
+    V(0.06, 1.025, side * 0.4),
+    V(0.32, 1.05, side * 0.38),
+    V(0.58, 1.01, side * 0.32),
+    V(0.75, 0.95, side * 0.25),
   ]);
   const outward = V(0, 0.15, side).normalize();
   const er = table([[0, 0.05], [0.3, 0.04], [0.7, 0.03], [1, 0.012]]);
   parts.push(sweep(40, 12, curveFrames(edge, outward), (t, th) => [Math.cos(th) * er(t) * 0.55, Math.sin(th) * er(t)]));
 
   // feather direction in the side view: angle from +x, turning from back-down to forward-down
-  const ang = table([[0, 4.05], [0.25, 4.45], [0.5, 4.75], [0.7, 5.15], [0.85, 5.6], [1, 5.95]]);
+  const ang = table([[0, 4.3], [0.25, 4.55], [0.5, 4.75], [0.7, 5.15], [0.85, 5.6], [1, 5.95]]);
   const dirAt = (u: number, splay: number) => {
     const a = ang(u);
     return V(Math.cos(a), Math.sin(a), side * splay).normalize();
@@ -241,20 +241,24 @@ function wing(side: number) {
   const outAt = (u: number) => V(0, 0.2, side).normalize().addScaledVector(V(-1, 0, 0), u < 0.5 ? 0.2 : -0.1).normalize();
 
   // flight feathers: secondaries then long primaries
-  const flights = 13;
-  const flen = table([[0, 0.17], [0.2, 0.27], [0.45, 0.32], [0.7, 0.36], [0.88, 0.42], [1, 0.4]]);
+  const flights = 17;
+  const flen = table([[0, 0.17], [0.2, 0.24], [0.45, 0.25], [0.65, 0.27], [0.85, 0.38], [1, 0.4]]);
   for (let i = 0; i < flights; i++) {
     const u = 0.1 + (i / (flights - 1)) * 0.9;
     const base = edge.getPointAt(Math.min(1, u * 0.97));
     const tan = edge.getTangentAt(Math.min(1, u * 0.97));
-    const dir = dirAt(u, 0.28 - u * 0.4);
-    parts.push(feather(base.addScaledVector(dir, 0.01), dir, tan, outAt(u), flen(u), 0.05 + u * 0.012, 0.18, 0.12 + u * 0.1, 1.35));
+    const dir = dirAt(u, 0.12 - u * 0.3);
+    // alternate feathers sit a hair proud of their neighbours so the overlaps read as layers
+    const base2 = base.addScaledVector(dir, 0.01).addScaledVector(outAt(u), (i % 2) * 0.009);
+    parts.push(feather(base2, dir, tan, outAt(u), flen(u), 0.062 + u * 0.016, 0.18, 0.12 + u * 0.1, 1.35));
   }
   // two staggered covert rows, laid over the outer face of the flights
   const rows: [number, number, number, number][] = [
     // count, length, width, outward offset
     [11, 0.2, 0.05, 0.016],
     [12, 0.11, 0.042, 0.03],
+    // under-coverts on the inner face, closing the gaps between the flight roots
+    [12, 0.15, 0.06, -0.012],
   ];
   rows.forEach(([n, len, wd, off], r) => {
     for (let i = 0; i < n; i++) {
@@ -262,7 +266,7 @@ function wing(side: number) {
       const base = edge.getPointAt(u);
       const tan = edge.getTangentAt(u);
       const out = outAt(u);
-      const dir = dirAt(u * 0.92, 0.22 - u * 0.25);
+      const dir = dirAt(u * 0.92, 0.08 - u * 0.2);
       const l = len * (0.75 + 0.35 * Math.sin(Math.PI * Math.min(1, u * 1.1)));
       parts.push(feather(base.addScaledVector(out, off).addScaledVector(dir, -0.005), dir, tan, out, l, wd, 0.12, 0.2, 1.2));
     }

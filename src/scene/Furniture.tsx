@@ -109,7 +109,7 @@ export function Ark() {
         <Cherub />
       </group>
       {/* the Presence above the mercy seat (illustrative) */}
-      <pointLight position={[0, H + 1.2, 0]} color="#fff2c4" intensity={5} distance={9} decay={1.6} />
+      <pointLight position={[0, H + 1.9, 0]} color="#fff2c4" intensity={3.5} distance={9} decay={1.6} />
     </group>
   );
 }
