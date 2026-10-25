@@ -2,7 +2,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useStore } from '../store';
-import { EYE_HEIGHT, regionOf, START } from './dims';
+import { DEBUG, EYE_HEIGHT, regionOf, START } from './dims';
 import { buildNav, findPath, walkable } from './nav';
 
 /** Mutable player state shared with the HUD (mini-map) without React re-renders. */
@@ -16,7 +16,6 @@ export const player = {
   target: null as [number, number] | null,
 };
 
-// Handy for debugging and automated screenshots.
 const SPEED = 5.5; // cubits per second (≈ 2.5 m/s)
 
 export function walkTo(x: number, z: number) {
@@ -28,7 +27,7 @@ export function walkTo(x: number, z: number) {
 }
 
 // Handy for debugging and automated screenshots.
-(window as unknown as Record<string, unknown>).__tabernacle = { player, useStore, walkTo };
+if (DEBUG) (window as unknown as Record<string, unknown>).__tabernacle = { player, useStore, walkTo };
 
 /** Turn the camera to face a point. */
 export function lookAt(x: number, z: number) {

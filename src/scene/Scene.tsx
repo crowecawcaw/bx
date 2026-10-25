@@ -8,7 +8,7 @@ import { Courtyard } from './Courtyard';
 import { World } from './Environment';
 import { Ark, BronzeAltar, IncenseAltar, Laver, Menorah, Table } from './Furniture';
 import { lookAt, player, Player, walkTo } from './Player';
-import { regionOf } from './dims';
+import { DEBUG, regionOf } from './dims';
 import { Tent } from './Tent';
 
 const CURTAIN_REACH = 14;
@@ -84,7 +84,7 @@ export function Scene() {
       gl={{ antialias: true, powerPreference: 'high-performance' }}
       camera={{ fov: 70, near: 0.1, far: 2000 }}
       onCreated={({ gl }) => {
-        (window as unknown as Record<string, unknown>).__gl = gl;
+        if (DEBUG) (window as unknown as Record<string, unknown>).__gl = gl;
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         gl.toneMappingExposure = 1.05;
       }}

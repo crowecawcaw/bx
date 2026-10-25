@@ -61,3 +61,6 @@ export const REGION_LABEL: Record<Region, string> = {
   holy: 'The Holy Place',
   holiest: 'The Most Holy Place',
 };
+
+/** Debug hooks (window.__tabernacle, window.__gl) load only with ?debug in the URL. */
+export const DEBUG = new URLSearchParams(window.location.search).has('debug');
