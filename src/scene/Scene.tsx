@@ -82,7 +82,7 @@ export function Scene() {
       shadows
       dpr={[1, 1.75]}
       gl={{ antialias: true, powerPreference: 'high-performance' }}
-      camera={{ fov: 70, near: 0.1, far: 2000 }}
+      camera={{ fov: 70, near: 0.1, far: 3000 }}
       onCreated={({ gl }) => {
         if (DEBUG) (window as unknown as Record<string, unknown>).__gl = gl;
         gl.toneMapping = THREE.ACESFilmicToneMapping;
