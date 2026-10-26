@@ -1,6 +1,6 @@
 # Tabernacle Explorer
 
-Walk through the Old Testament tabernacle in 3D, built to the measurements in Exodus 25–40. It runs in a phone or desktop browser.
+Walk through the Old Testament tabernacle in 3D, built to the measurements in Exodus 25–40, or through Solomon's Temple (`?site=temple`), built to 1 Kings 6–8 and 2 Chronicles 3–5. It runs in a phone or desktop browser. The intro screen switches between the two.
 
 - **Tap** the ground to walk there (pathfinding goes around walls). **Drag** to look around. **WASD** or the arrow keys also work.
 - **Tap a curtain** when you are close to draw it aside: the court gate, the door of the tent, or the veil.
@@ -20,6 +20,12 @@ Fabric uses only the commanded colours: blue, purple, scarlet and fine twined li
 
 Scripture text is the King James Version (public domain), from [thiagobodruk/bible](https://github.com/thiagobodruk/bible). To regenerate it, run `npm run verses`.
 
+## Solomon's Temple
+
+Open with `?site=temple`. The house is 60 × 20 × 30 cubits with a 20-cubit cube for the oracle. The porch is 120 cubits high, as written in 2 Chr 3:4. The side chambers are 5, 6 and 7 cubits wide on narrowed rests. Jachin and Boaz have 400 pomegranates and seven chain wreaths each. The molten sea stands on twelve oxen with 300 knops to a row. Also modeled: the ten wheeled bases and lavers, the 20 × 20 × 10 bronze altar, the ten lampstands and ten tables, the golden altar, the doors of olive wood and fir, the chains of gold, the veil, and the two 10-cubit cherubim whose wings reach from wall to wall. All of it is listed in `src/data/templeSpecs.ts`.
+
+Where Scripture is silent (wall thickness, the size of the courts, door heights, the altar's ramp) or the accounts differ (2,000 or 3,000 baths, one table or ten), the info panel says what the model chose and why.
+
 ## Development
 
 ```sh
@@ -33,6 +39,6 @@ Built with React, TypeScript, Vite, three.js and @react-three/fiber. The toon sh
 ## Deployment (GitHub Pages)
 
 - A push to `main` builds the site and publishes it to the `gh-pages` branch root (`.github/workflows/deploy.yml`).
-- Each pull request builds a preview and publishes it to `gh-pages:/pr-preview/pr-<number>/`. A bot comment on the PR links to it. When the PR is merged or closed, the preview folder is deleted (`.github/workflows/pr-preview.yml`).
+- Each pull request builds a preview and publishes it to `gh-pages:/pr-preview/pr-<number>/`. A bot comment on the PR links to both experiences. When the PR is merged or closed, the preview folder is deleted (`.github/workflows/pr-preview.yml`). This uses only git and the `gh` CLI on the runner, with no third-party actions.
 
 One-time setup: in **Settings → Pages**, set the source to **Deploy from a branch**, branch `gh-pages`, folder `/ (root)`.

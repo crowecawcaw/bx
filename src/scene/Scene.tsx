@@ -2,19 +2,24 @@ import { Html, PerformanceMonitor } from '@react-three/drei';
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { FEATURES } from '../data/specs';
+import { SITE } from '../sites';
 import { useStore, type CurtainId } from '../store';
+import { Temple } from '../temple/Temple';
+import { TempleWorld } from '../temple/TempleWorld';
 import { Courtyard } from './Courtyard';
 import { World } from './Environment';
 import { Ark, BronzeAltar, IncenseAltar, Laver, Menorah, Table } from './Furniture';
-import { lookAt, player, Player, walkTo } from './Player';
-import { DEBUG, regionOf } from './dims';
+import { lookAt, player, Player, teleportTo, walkTo } from './Player';
+import { DEBUG } from './dims';
+import { levelFor } from './nav';
 import { Post } from './Post';
 import { Tent } from './Tent';
 
 const POST = !new URLSearchParams(location.search).has('nopost');
 
-const CURTAIN_REACH = 14;
+const CURTAIN_REACH = SITE.reach;
+const FEATURES = SITE.features;
+const TEMPLE = SITE.id === 'temple';
 
 function tagOf(o: THREE.Object3D | null) {
   let curtain: CurtainId | undefined;
@@ -38,8 +43,22 @@ function onTap(e: ThreeEvent<MouseEvent>) {
       return;
     }
   }
-  walkTo(p.x, p.z);
+  const level = levelFor(p.x, p.y, p.z, player.level);
+  // a second tap close to the first, soon after, blinks you there instead of walking
+  const now = performance.now();
+  const sx = e.nativeEvent.clientX;
+  const sy = e.nativeEvent.clientY;
+  if (now - lastTap.t < 320 && Math.hypot(sx - lastTap.x, sy - lastTap.y) < 40) {
+    lastTap.t = 0;
+    teleportTo(p.x, p.z, level);
+    return;
+  }
+  lastTap.t = now;
+  lastTap.x = sx;
+  lastTap.y = sy;
+  walkTo(p.x, p.z, level);
 }
+const lastTap = { t: 0, x: 0, y: 0 };
 
 function Bubbles() {
   const [visible, setVisible] = useState<string[]>([]);
@@ -47,7 +66,7 @@ function Bubbles() {
   const discovered = useStore((s) => s.discovered);
   useEffect(() => {
     const id = setInterval(() => {
-      const r = regionOf(player.x, player.z);
+      const r = SITE.regionOf(player.x, player.z);
       const v = FEATURES.filter((f) => {
         if (!f.regions.includes(r)) return false;
         const d = Math.hypot(f.bubble[0] - player.x, f.bubble[2] - player.z);
@@ -122,21 +141,25 @@ export function Scene() {
       />
       <ShadowWarmup />
       <Suspense fallback={null}>
-        <group raycast={() => null}>
-          <World />
-        </group>
+        <group raycast={() => null}>{TEMPLE ? <TempleWorld /> : <World />}</group>
         <group onClick={onTap}>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]} visible={false} userData={{ ground: true }}>
-            <planeGeometry args={[400, 400]} />
+            <planeGeometry args={[1000, 1000]} />
           </mesh>
-          <Courtyard />
-          <Tent />
-          <Ark />
-          <Table />
-          <Menorah />
-          <IncenseAltar />
-          <BronzeAltar />
-          <Laver />
+          {TEMPLE ? (
+            <Temple />
+          ) : (
+            <>
+              <Courtyard />
+              <Tent />
+              <Ark />
+              <Table />
+              <Menorah />
+              <IncenseAltar />
+              <BronzeAltar />
+              <Laver />
+            </>
+          )}
         </group>
         <Bubbles />
         <Player />

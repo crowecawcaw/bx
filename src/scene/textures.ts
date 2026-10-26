@@ -12,27 +12,340 @@ type Draw = (ctx: CanvasRenderingContext2D, w: number, h: number) => void;
 
 const cache = new Map<string, THREE.CanvasTexture>();
 
-function make(key: string, w: number, h: number, draw: Draw, repeat?: [number, number], color = true) {
+function measure(name: string, t0: number) {
+  try {
+    performance.measure(`tex:${name}`, { start: t0 });
+  } catch {
+    /* timing is only a diagnostic */
+  }
+}
+
+export function make(key: string, w: number, h: number, draw: Draw, repeat?: [number, number], color = true) {
   const hit = cache.get(key);
   if (hit) return hit;
+  const t0 = performance.now();
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
-  const ctx = c.getContext('2d')!;
+  const ctx = c.getContext('2d', { willReadFrequently: false })!;
   draw(ctx, w, h);
   const t = new THREE.CanvasTexture(c);
   if (color) t.colorSpace = THREE.SRGBColorSpace;
+  // three clamps this to the renderer's maximum
   t.anisotropy = 8;
   if (repeat) {
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.repeat.set(repeat[0], repeat[1]);
   }
   cache.set(key, t);
+  measure(key, t0);
   return t;
 }
 
+// ───────────────────────── procedural noise ─────────────────────────
+// Everything here tiles: lattice periods are whole numbers that wrap at the texture's edges.
+
+/** Quintic fade, so value noise has no visible creases at lattice lines. */
+const fade = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
+
+/**
+ * Adds `amp` × tileable value noise (−1..1) to `out` (w × h): a px × py lattice of random values,
+ * smoothly interpolated. Unequal px and py stretch it into streaks.
+ */
+export function addNoise(out: Float32Array, w: number, h: number, px: number, py: number, amp: number, seed: number) {
+  px = Math.max(1, Math.min(w, Math.round(px)));
+  py = Math.max(1, Math.min(h, Math.round(py)));
+  const r = rng(seed * 7919 + px * 131 + py * 17);
+  const lat = new Float32Array(px * py);
+  for (let i = 0; i < lat.length; i++) lat[i] = r() * 2 - 1;
+  const x0 = new Int32Array(w);
+  const x1 = new Int32Array(w);
+  const tx = new Float32Array(w);
+  for (let x = 0; x < w; x++) {
+    const g = (x * px) / w;
+    const i = Math.floor(g);
+    x0[x] = i % px;
+    x1[x] = (i + 1) % px;
+    tx[x] = fade(g - i);
+  }
+  for (let y = 0; y < h; y++) {
+    const g = (y * py) / h;
+    const j = Math.floor(g);
+    const t = fade(g - j);
+    const r0 = (j % py) * px;
+    const r1 = ((j + 1) % py) * px;
+    const o = y * w;
+    for (let x = 0; x < w; x++) {
+      const a = lat[r0 + x0[x]];
+      const c = lat[r1 + x0[x]];
+      const u = tx[x];
+      const top = a + (lat[r0 + x1[x]] - a) * u;
+      const bot = c + (lat[r1 + x1[x]] - c) * u;
+      out[o + x] += amp * (top + (bot - top) * t);
+    }
+  }
+  return out;
+}
+
+/**
+ * Fractal (fbm) value noise, roughly −1..1: `oct` octaves from a px × py lattice, each twice as fine.
+ * With `div` > 1 it is computed that many times smaller and smoothly enlarged: much quicker, and
+ * no loss for broad fields whose finest octave spans several pixels.
+ */
+export function fbm(w: number, h: number, px: number, py: number, oct: number, seed: number, gain = 0.5, div = 1): Float32Array {
+  if (div > 1 && w % div === 0 && h % div === 0) return enlarge(fbm(w / div, h / div, px, py, oct, seed, gain), w / div, h / div, div);
+  const out = new Float32Array(w * h);
+  let amp = 1;
+  let norm = 0;
+  for (let o = 0; o < oct; o++) {
+    if (px * 2 ** o > w * 1.01 && py * 2 ** o > h * 1.01) break;
+    addNoise(out, w, h, px * 2 ** o, py * 2 ** o, amp, seed + o * 101);
+    norm += amp;
+    amp *= gain;
+  }
+  // value-noise fbm rarely leaves ±0.6, so stretch it to use most of −1..1
+  const k = 1.6 / norm;
+  for (let i = 0; i < out.length; i++) out[i] *= k;
+  return out;
+}
+
+/** Bilinear, wrapping enlargement of a w × h field by a whole factor. */
+function enlarge(src: Float32Array, w: number, h: number, k: number) {
+  const W = w * k;
+  const H = h * k;
+  const out = new Float32Array(W * H);
+  const x0 = new Int32Array(W);
+  const x1 = new Int32Array(W);
+  const tx = new Float32Array(W);
+  for (let x = 0; x < W; x++) {
+    const g = (x + 0.5) / k - 0.5;
+    const i = Math.floor(g);
+    x0[x] = (i + w) % w;
+    x1[x] = (i + 1 + w) % w;
+    tx[x] = g - i;
+  }
+  for (let y = 0; y < H; y++) {
+    const g = (y + 0.5) / k - 0.5;
+    const j = Math.floor(g);
+    const t = g - j;
+    const r0 = ((j + h) % h) * w;
+    const r1 = ((j + 1 + h) % h) * w;
+    const o = y * W;
+    for (let x = 0; x < W; x++) {
+      const a = src[r0 + x0[x]];
+      const c = src[r1 + x0[x]];
+      const u = tx[x];
+      const top = a + (src[r0 + x1[x]] - a) * u;
+      out[o + x] = top + (c + (src[r1 + x1[x]] - c) * u - top) * t;
+    }
+  }
+  return out;
+}
+
+/** Per-pixel white noise, −1..1. */
+export function grain(w: number, h: number, seed: number) {
+  const out = new Float32Array(w * h);
+  let s = (seed * 2654435761) >>> 0;
+  for (let i = 0; i < out.length; i++) {
+    s ^= s << 13;
+    s ^= s >>> 17;
+    s ^= s << 5;
+    out[i] = ((s >>> 0) / 4294967296) * 2 - 1;
+  }
+  return out;
+}
+
+/**
+ * Tileable cellular noise over a cx × cy grid of jittered points. Per pixel: `f1` the distance to
+ * the nearest point and `f2` to the next (in cell units), `tone` a random −1..1 per cell, and
+ * `dx`, `dy` the offset from the nearest point (for shading dents).
+ */
+export function cells(w: number, h: number, cx: number, cy: number, seed: number, jitter = 0.85) {
+  const r = rng(seed);
+  const n = cx * cy;
+  const jx = new Float32Array(n);
+  const jy = new Float32Array(n);
+  const tn = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    jx[i] = 0.5 + (r() - 0.5) * jitter;
+    jy[i] = 0.5 + (r() - 0.5) * jitter;
+    tn[i] = r() * 2 - 1;
+  }
+  const f1 = new Float32Array(w * h);
+  const f2 = new Float32Array(w * h);
+  const tone = new Float32Array(w * h);
+  const dx = new Float32Array(w * h);
+  const dy = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const gy = (y * cy) / h;
+    const cj = Math.floor(gy);
+    for (let x = 0; x < w; x++) {
+      const gx = (x * cx) / w;
+      const ci = Math.floor(gx);
+      let d1 = 9;
+      let d2 = 9;
+      let best = 0;
+      let bx = 0;
+      let by = 0;
+      for (let j = -1; j <= 1; j++) {
+        const yy = cj + j;
+        const row = ((yy % cy) + cy) % cy;
+        for (let i = -1; i <= 1; i++) {
+          const xx = ci + i;
+          const id = row * cx + (((xx % cx) + cx) % cx);
+          const ox = xx + jx[id] - gx;
+          const oy = yy + jy[id] - gy;
+          const d = ox * ox + oy * oy;
+          if (d < d1) {
+            d2 = d1;
+            d1 = d;
+            best = id;
+            bx = ox;
+            by = oy;
+          } else if (d < d2) d2 = d;
+        }
+      }
+      const o = y * w + x;
+      f1[o] = Math.sqrt(d1);
+      f2[o] = Math.sqrt(d2);
+      tone[o] = tn[best];
+      dx[o] = -bx;
+      dy[o] = -by;
+    }
+  }
+  return { f1, f2, tone, dx, dy };
+}
+
+let facetTile: Float32Array | null = null;
+/** Size of the shared hammer-facet tile; sample it as `F[((y & FACET_MASK) << FACET_SHIFT) | (x & FACET_MASK)]`. */
+export const FACET_SHIFT = 9;
+export const FACET_MASK = (1 << FACET_SHIFT) - 1;
+
+/**
+ * Hammer facets, about 14 px across, on a shared 512² tile (roughly −1..1): each a shallow dent
+ * whose far side catches light from the upper left, faint ridges where dents meet, and a slight
+ * difference of tone from facet to facet. Computed once and reused by every beaten-metal texture.
+ */
+export function hammerFacets() {
+  if (facetTile) return facetTile;
+  const S = 1 << FACET_SHIFT;
+  const c = cells(S, S, 36, 36, 74);
+  const out = new Float32Array(S * S);
+  for (let i = 0; i < out.length; i++) {
+    const facet = (c.dx[i] + c.dy[i]) * 0.7 * smooth(0.05, 0.5, c.f1[i]);
+    const edge = 1 - smooth(0.02, 0.1, c.f2[i] - c.f1[i]);
+    out[i] = 0.7 * facet - 0.25 * edge + 0.3 * c.tone[i];
+  }
+  return (facetTile = out);
+}
+
+/** Stamps `n` small round pits (casting pores, tool pecks) into `out` as depths 0..1, wrapping at edges. */
+export function pits(out: Float32Array, w: number, h: number, n: number, rMin: number, rMax: number, seed: number, depth = 1) {
+  const r = rng(seed);
+  for (let k = 0; k < n; k++) {
+    const cx = r() * w;
+    const cy = r() * h;
+    const rad = rMin + (rMax - rMin) * r() * r();
+    const dd = depth * (0.5 + r() * 0.5);
+    const R = Math.ceil(rad + 1);
+    for (let j = -R; j <= R; j++) {
+      const y = (((Math.floor(cy) + j) % h) + h) % h;
+      for (let i = -R; i <= R; i++) {
+        const x = (((Math.floor(cx) + i) % w) + w) % w;
+        const ddx = Math.floor(cx) + i + 0.5 - cx;
+        const ddy = Math.floor(cy) + j + 0.5 - cy;
+        const d = Math.sqrt(ddx * ddx + ddy * ddy) / rad;
+        if (d >= 1) continue;
+        const v = dd * (1 - d * d);
+        const o = y * w + x;
+        if (v > out[o]) out[o] = v;
+      }
+    }
+  }
+  return out;
+}
+
+export const smooth = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+const bumps = new Map<string, THREE.CanvasTexture>();
+
+/** A grayscale bump texture from heights (0..1), averaged down by `div`. */
+function bumpTexture(height: Float32Array, w: number, h: number, div: number) {
+  const bw = Math.max(1, Math.floor(w / div));
+  const bh = Math.max(1, Math.floor(h / div));
+  const c = document.createElement('canvas');
+  c.width = bw;
+  c.height = bh;
+  const ctx = c.getContext('2d')!;
+  const img = ctx.createImageData(bw, bh);
+  const d = img.data;
+  const k = 255 / (div * div);
+  for (let y = 0; y < bh; y++) {
+    for (let x = 0; x < bw; x++) {
+      let s = 0;
+      for (let j = 0; j < div; j++) {
+        const o = (y * div + j) * w + x * div;
+        for (let i = 0; i < div; i++) s += height[o + i];
+      }
+      const v = Math.min(255, Math.max(0, s * k));
+      const o = (y * bw + x) * 4;
+      d[o] = d[o + 1] = d[o + 2] = v;
+      d[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.anisotropy = 8;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+/**
+ * Like `make`, but the draw function also returns a height field (w × h, 0..1), which becomes a
+ * matching bump map (fetch it with `bumpOf(key)`), `div` times smaller, with the same repeat.
+ */
+export function makeBumped(
+  key: string,
+  w: number,
+  h: number,
+  draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => Float32Array,
+  repeat: [number, number] = [1, 1],
+  div = 2,
+) {
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const out: { h?: Float32Array } = {};
+  const t = make(key, w, h, (ctx) => (out.h = draw(ctx, w, h)), repeat);
+  const t0 = performance.now();
+  const b = bumpTexture(out.h!, w, h, div);
+  b.repeat.copy(t.repeat);
+  bumps.set(key, b);
+  measure(`${key}:bump`, t0);
+  return t;
+}
+
+export function bumpOf(key: string) {
+  return bumps.get(key)!;
+}
+
+/** Writes an ImageData from per-pixel RGB arrays (0..255). */
+export function putRGB(ctx: CanvasRenderingContext2D, w: number, h: number, r: Float32Array, g: Float32Array, b: Float32Array) {
+  const img = ctx.createImageData(w, h);
+  const d = img.data;
+  for (let i = 0, o = 0; i < w * h; i++, o += 4) {
+    d[o] = r[i];
+    d[o + 1] = g[i];
+    d[o + 2] = b[i];
+    d[o + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
 // Deterministic pseudo-random so textures look the same on every load.
-function rng(seed: number) {
+export function rng(seed: number) {
   let s = seed >>> 0;
   return () => {
     s = (s * 1664525 + 1013904223) >>> 0;
@@ -61,7 +374,7 @@ function weave(ctx: CanvasRenderingContext2D, w: number, h: number, step: number
   }
 }
 
-function noise(ctx: CanvasRenderingContext2D, w: number, h: number, n: number, rgb: string, a: number, seed = 7, size = 2) {
+export function noise(ctx: CanvasRenderingContext2D, w: number, h: number, n: number, rgb: string, a: number, seed = 7, size = 2) {
   const r = rng(seed);
   for (let i = 0; i < n; i++) {
     ctx.fillStyle = `rgba(${rgb},${r() * a})`;
@@ -500,21 +813,24 @@ export function boardTexture() {
 
 /** Hammered metal surface: subtle dents so toon gold doesn't look like plastic. */
 export function hammeredTexture() {
-  return make('hammered', 256, 256, (ctx, w, h) => {
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, w, h);
-    const r = rng(71);
-    for (let i = 0; i < 260; i++) {
-      const x = r() * w;
-      const y = r() * h;
-      const rad = 4 + r() * 10;
-      const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
-      g.addColorStop(0, 'rgba(255,255,255,0.0)');
-      g.addColorStop(0.7, 'rgba(0,0,0,0.05)');
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+  // A near-white multiplier for the material colour: small planishing facets from the hammer,
+  // fine burnish streaks, broad tonal drift and a few pores.
+  return make('hammered', 512, 512, (ctx, w, h) => {
+    const broad = fbm(w, h, 3, 3, 5, 71, 0.55, 2);
+    const burnish = fbm(w, h, 2, 96, 3, 72, 0.6);
+    addNoise(burnish, w, h, 6, 384, 0.5, 73);
+    const F = hammerFacets();
+    const gr = grain(w, h, 75);
+    const pit = pits(new Float32Array(w * h), w, h, 260, 0.8, 2.4, 76);
+    const v = new Float32Array(w * h);
+    for (let y = 0, i = 0; y < h; y++) {
+      const row = (y & FACET_MASK) << FACET_SHIFT;
+      for (let x = 0; x < w; x++, i++) {
+        const k = 0.94 + 0.045 * broad[i] + 0.02 * burnish[i] + 0.045 * F[row | (x & FACET_MASK)] - 0.22 * pit[i] + 0.01 * gr[i];
+        v[i] = 255 * Math.min(1, k);
+      }
     }
+    putRGB(ctx, w, h, v, v, v);
   }, [2, 2]);
 }
 

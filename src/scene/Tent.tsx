@@ -3,9 +3,8 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { useStore } from '../store';
 import { Cloth } from './Cloth';
-import { TENT } from './dims';
+import { DOOR_PILLAR_X, DOOR_PILLARS_Z, DOOR_SCREEN_X, TENT, VEIL_PILLAR_X, VEIL_PILLARS_Z } from './dims';
 import { bronze, cloth, gold, silver, toon } from './materials';
-import { DOOR_PILLAR_X, DOOR_PILLARS_Z, DOOR_SCREEN_X, VEIL_PILLAR_X, VEIL_PILLARS_Z } from './nav';
 import { boardTexture, goatHairTexture, innerCurtainTexture, needleworkTexture, skinTexture, veilTexture } from './textures';
 
 const T = TENT.boardThickness;

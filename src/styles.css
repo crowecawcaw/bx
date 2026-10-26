@@ -142,3 +142,23 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .verse span { font-style: normal; font-size: 13px; color: var(--muted); }
 .intro ul { text-align: left; font-size: 14.5px; line-height: 1.6; padding-left: 20px; }
 .primary { margin-top: 6px; background: var(--gold); color: #fff; border: 2px solid var(--ink); border-radius: 12px; padding: 10px 22px; font-weight: 700; font-size: 16px; }
+
+/* Temple map */
+.minimap.temple { width: min(52vw, 280px); background: rgba(201, 169, 130, 0.92); }
+.mm-great { fill: #d4c19a; stroke: var(--ink); stroke-width: 1.4; }
+.minimap.temple .mm-court { fill: #e4d6b6; stroke-width: 1.4; }
+.minimap.temple .mm-gate { stroke-width: 4; }
+.mm-stone { fill: #c9b48c; stroke: var(--ink); stroke-width: 0.8; }
+.mm-goldroom { fill: #f2c14e; stroke: var(--ink); stroke-width: 0.6; }
+.mm-porch { fill: #e8cf86; stroke: var(--ink); stroke-width: 0.5; }
+.mm-ramp { fill: #c9b48c; stroke: var(--ink); stroke-width: 0.5; }
+.minimap.temple .mm-veil { stroke-width: 1.6; }
+.mm-label.big { font-size: 13px; }
+
+.switch { display: inline-block; font-weight: 700; color: var(--purple); text-decoration: none; border-bottom: 2px solid currentColor; }
+.intro .tabs { display: flex; gap: 6px; justify-content: center; margin: 0 0 8px; }
+.intro .tabs a, .intro .tabs span {
+  font-size: 13.5px; font-weight: 700; padding: 5px 12px; border-radius: 999px; border: 2px solid var(--ink);
+  text-decoration: none; color: var(--ink); background: var(--paper-2);
+}
+.intro .tabs span { background: var(--gold); color: #fff; }

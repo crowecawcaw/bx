@@ -7,8 +7,31 @@ const ALIASES: Record<string, string> = {
   ex: 'Exodus', exo: 'Exodus', exod: 'Exodus', exodus: 'Exodus',
   lv: 'Leviticus', lev: 'Leviticus', leviticus: 'Leviticus',
   nm: 'Numbers', num: 'Numbers', numbers: 'Numbers',
+  '1ki': '1 Kings', '1kgs': '1 Kings', '1kings': '1 Kings',
+  '2ki': '2 Kings', '2kgs': '2 Kings', '2kings': '2 Kings',
+  '1ch': '1 Chronicles', '1chr': '1 Chronicles', '1chron': '1 Chronicles', '1chronicles': '1 Chronicles',
+  '2ch': '2 Chronicles', '2chr': '2 Chronicles', '2chron': '2 Chronicles', '2chronicles': '2 Chronicles',
+  jer: 'Jeremiah', jeremiah: 'Jeremiah',
   heb: 'Hebrews', hebrews: 'Hebrews',
 };
+
+const SHORT: Record<string, string> = {
+  Exodus: 'Ex',
+  Leviticus: 'Lev',
+  Numbers: 'Num',
+  '1 Kings': '1 Kgs',
+  '2 Kings': '2 Kgs',
+  '1 Chronicles': '1 Chr',
+  '2 Chronicles': '2 Chr',
+  Jeremiah: 'Jer',
+  Hebrews: 'Heb',
+};
+
+/** "2 Chronicles 3:4" → "2 Chr 3:4" */
+export function abbreviate(ref: string) {
+  for (const [long, short] of Object.entries(SHORT)) if (ref.startsWith(long)) return short + ref.slice(long.length);
+  return ref;
+}
 
 export interface Verse {
   ref: string;
@@ -32,7 +55,7 @@ export function lookup(input: string): Passage | { error: string } {
     .match(/^([1-3]?\s?[a-z]+)\.?\s*(\d+)(?::(\d+))?(?:\s*[-–]\s*(?:(\d+):)?(\d+))?$/i);
   if (!m) return { error: 'Try a reference like "Exodus 26:31-33".' };
   const book = ALIASES[m[1].toLowerCase().replace(/\s/g, '')];
-  if (!book) return { error: `“${m[1]}” isn’t included. Try Exodus, Leviticus, Numbers or Hebrews.` };
+  if (!book) return { error: `“${m[1]}” isn’t included. Try ${Object.keys(BIBLE).join(', ')}.` };
   const c1 = Number(m[2]);
   const v1 = m[3] ? Number(m[3]) : 1;
   const c2 = m[4] ? Number(m[4]) : c1;
@@ -54,5 +77,5 @@ export function lookup(input: string): Passage | { error: string } {
     for (let v = from; v <= to; v++) verses.push({ ref: `${c}:${v}`, text: ch[v - 1] });
   }
   if (!verses.length) return { error: 'No verses in that range.' };
-  return { ref: `${book} ${input.trim().replace(/^\S+\s*/, '')}`, verses };
+  return { ref: `${book} ${input.trim().replace(/^([1-3]\s?)?[a-z]+\.?\s*/i, '')}`, verses };
 }

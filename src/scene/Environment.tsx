@@ -6,7 +6,7 @@ import { COURT } from './dims';
 import { toon, toonRamp, windTime } from './materials';
 import { sandTexture, trodTexture } from './textures';
 
-function SkyDome() {
+export function SkyDome() {
   const mat = useMemo(
     () =>
       new THREE.ShaderMaterial({
@@ -51,7 +51,7 @@ function noise2(x: number, y: number) {
   return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
 }
 /** Ridged fractal noise: sharp crests, broad valleys. 0..1 */
-function ridged(x: number, y: number) {
+export function ridged(x: number, y: number) {
   let sum = 0;
   let amp = 0.5;
   let f = 1;
@@ -320,7 +320,7 @@ function Scatter() {
   );
 }
 
-function Wind() {
+export function Wind() {
   useFrame(({ clock }) => {
     windTime.value = clock.elapsedTime;
   });

@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { FEATURES, GENERAL, type Requirement } from '../data/specs';
-import { AVAILABLE, lookup } from '../data/verses';
-import { COURT, POS, REGION_LABEL, TENT } from '../scene/dims';
-import { player, walkTo } from '../scene/Player';
+import { type Requirement } from '../data/specs';
+import { AVAILABLE, abbreviate, lookup } from '../data/verses';
+import { COURT, POS, TENT } from '../scene/dims';
+import { siteHref } from '../site';
+import { SITE } from '../sites';
 import { useStore } from '../store';
+import { tapToWalk, usePlayerDot } from './mapCommon';
+import { TempleMap } from './TempleMap';
+
+const FEATURES = SITE.features;
+const GENERAL = SITE.general;
+const TEMPLE = SITE.id === 'temple';
 
 const LAYER_NAMES = ['Bare frame', 'Linen with cherubim', "+ Goats' hair", "+ Rams' skins", '+ Tachash skins (all)'];
 
@@ -11,7 +18,7 @@ function RefLink({ r }: { r: string }) {
   const show = useStore((s) => s.showScripture);
   return (
     <button className="ref" onClick={() => show(r)}>
-      {r.replace('Exodus', 'Ex').replace('Leviticus', 'Lev').replace('Hebrews', 'Heb').replace('Numbers', 'Num')}
+      {abbreviate(r)}
     </button>
   );
 }
@@ -79,8 +86,7 @@ function SpecsPanel() {
   return (
     <>
       <p className="summary">
-        Every requirement from the building instructions (Exodus 25–40, with Leviticus 24 and Hebrews 9), and where each
-        one appears in this model. <b>{total}</b> requirements are modeled.
+        {SITE.specsIntro} <b>{total}</b> requirements are modeled.
       </p>
       <h3>General</h3>
       <ReqList items={GENERAL} />
@@ -122,7 +128,7 @@ function ScripturePanel() {
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="e.g. Exodus 26:31-33"
+          placeholder={TEMPLE ? 'e.g. 1 Kings 6:23-28' : 'e.g. Exodus 26:31-33'}
           aria-label="Bible reference"
           enterKeyHint="search"
         />
@@ -145,7 +151,7 @@ function ScripturePanel() {
         {AVAILABLE.flatMap((b) =>
           b.chapters.map((c) => (
             <button key={`${b.book}${c}`} className="ref" onClick={() => show(`${b.book} ${c}`)}>
-              {b.book.slice(0, 3)} {c}
+              {abbreviate(`${b.book} ${c}`)}
             </button>
           )),
         )}
@@ -160,18 +166,35 @@ function Help() {
       <p>
         <b>Tap</b> the ground to walk there. <b>Drag</b> to look around. On a keyboard, use <b>WASD</b> or the arrow keys.
       </p>
-      <p>
-        <b>Tap a curtain</b> when you are close to draw it aside or close it: the gate, the door of the tent, and the veil.
-      </p>
+      {TEMPLE ? (
+        <p>
+          <b>Tap a door</b> when you are close to open or close it: the gate of the inner court, the doors of the temple,
+          the doors of the oracle, and the veil.
+        </p>
+      ) : (
+        <p>
+          <b>Tap a curtain</b> when you are close to draw it aside or close it: the gate, the door of the tent, and the veil.
+        </p>
+      )}
       <p>
         <b>Info bubbles</b> appear near key objects. Tap one for the scriptural requirements and the verses.
       </p>
       <p>
-        <b>Layers</b> peels back the four coverings of the tent. <b>Map</b>: tap a spot to walk there.
+        {!TEMPLE && (
+          <>
+            <b>Layers</b> peels back the four coverings of the tent.{' '}
+          </>
+        )}
+        <b>Map</b>: tap a spot to walk there.
       </p>
       <p className="fine">
         Measurements are in cubits (about 18 in / 46 cm). Scripture text is the King James Version (public domain).
         Where Scripture gives no detail, each info panel says what the model assumes.
+      </p>
+      <p>
+        <a className="switch" href={siteHref(TEMPLE ? 'tabernacle' : 'temple')}>
+          {TEMPLE ? 'Visit the tabernacle ›' : "Visit Solomon's Temple ›"}
+        </a>
       </p>
     </div>
   );
@@ -199,21 +222,9 @@ function SidePanel() {
   );
 }
 
-/** Top-down plan; tap to walk. */
-function MiniMap() {
-  const dot = useRef<SVGGElement>(null);
-  useEffect(() => {
-    let raf = 0;
-    const tick = () => {
-      if (dot.current) {
-        const deg = (-player.yaw * 180) / Math.PI;
-        dot.current.setAttribute('transform', `translate(${player.x} ${player.z}) rotate(${deg})`);
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    tick();
-    return () => cancelAnimationFrame(raf);
-  }, []);
+/** Top-down plan of the tabernacle; tap to walk. */
+function TabernacleMap() {
+  const dot = usePlayerDot();
   const open = useStore((s) => s.open);
   const { minX, minZ, length, width, gateWidth } = COURT;
   const vb = `${minX - 18} ${minZ - 12} ${length + 36} ${width + 24}`;
@@ -221,14 +232,7 @@ function MiniMap() {
     <svg
       className="minimap"
       viewBox={vb}
-      onClick={(e) => {
-        const svg = e.currentTarget;
-        const pt = svg.createSVGPoint();
-        pt.x = e.clientX;
-        pt.y = e.clientY;
-        const p = pt.matrixTransform(svg.getScreenCTM()!.inverse());
-        walkTo(p.x, p.y);
-      }}
+      onClick={tapToWalk}
       aria-label="Map: tap to walk"
     >
       <rect x={minX} y={minZ} width={length} height={width} className="mm-court" />
@@ -273,7 +277,7 @@ export function Ui() {
     <div className="ui">
       <div className="topbar">
         <div className="title">
-          <div className="region">{REGION_LABEL[region]}</div>
+          <div className="region">{SITE.regionLabel[region]}</div>
           <div className="progress">
             {discovered.length}/{FEATURES.length} explored
           </div>
@@ -287,10 +291,12 @@ export function Ui() {
             <span aria-hidden>📐</span>
             <span className="lbl">Specs</span>
           </button>
-          <button onClick={cycleLayers} aria-label="Coverings">
-            <span aria-hidden>🧵</span>
-            <span className="lbl">Layers {layers}/4</span>
-          </button>
+          {SITE.layers && (
+            <button onClick={cycleLayers} aria-label="Coverings">
+              <span aria-hidden>🧵</span>
+              <span className="lbl">Layers {layers}/4</span>
+            </button>
+          )}
           <button onClick={() => setMap((m) => !m)} aria-label="Map" className={map ? 'on' : ''}>
             <span aria-hidden>🗺️</span>
             <span className="lbl">Map</span>
@@ -300,7 +306,7 @@ export function Ui() {
           </button>
         </nav>
       </div>
-      {map && <MiniMap />}
+      {map && (TEMPLE ? <TempleMap /> : <TabernacleMap />)}
       {toast && <div className="toast">{toast}</div>}
       <InfoPanel />
       <SidePanel />

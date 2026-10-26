@@ -8,9 +8,16 @@ import { bronze, gold, pureGold, toon } from './materials';
 import { Cherub } from './Cherub';
 import { netTexture } from './textures';
 
+/** Where a piece stands: tabernacle defaults, overridden by the temple. */
+interface Placement {
+  at?: readonly [number, number];
+  rotY?: number;
+  feature?: string;
+}
+
 const boxes = new Map<string, THREE.BufferGeometry>();
 /** Boxes with a slight bevel, so edges catch the light like worked wood and metal. */
-function rounded(s: [number, number, number]) {
+export function rounded(s: [number, number, number]) {
   const key = s.join();
   let g = boxes.get(key);
   if (!g) {
@@ -20,7 +27,7 @@ function rounded(s: [number, number, number]) {
   return g;
 }
 
-function Box({
+export function Box({
   p,
   s,
   m,
@@ -38,7 +45,7 @@ function Box({
   );
 }
 
-function Pole({ p, len, m, axis = 'x', r = 0.05 }: { p: [number, number, number]; len: number; m: THREE.Material; axis?: 'x' | 'z'; r?: number }) {
+export function Pole({ p, len, m, axis = 'x', r = 0.05 }: { p: [number, number, number]; len: number; m: THREE.Material; axis?: 'x' | 'z'; r?: number }) {
   return (
     <mesh position={p} rotation={axis === 'x' ? [0, 0, Math.PI / 2] : [Math.PI / 2, 0, 0]} material={m} castShadow>
       <cylinderGeometry args={[r, r, len, 8]} />
@@ -46,7 +53,7 @@ function Pole({ p, len, m, axis = 'x', r = 0.05 }: { p: [number, number, number]
   );
 }
 
-function Ring({ p, m, axis = 'x', r = 0.1 }: { p: [number, number, number]; m: THREE.Material; axis?: 'x' | 'z'; r?: number }) {
+export function Ring({ p, m, axis = 'x', r = 0.1 }: { p: [number, number, number]; m: THREE.Material; axis?: 'x' | 'z'; r?: number }) {
   return (
     <mesh position={p} rotation={axis === 'x' ? [0, Math.PI / 2, 0] : [0, 0, 0]} material={m}>
       <torusGeometry args={[r, r * 0.28, 6, 14]} />
@@ -55,7 +62,7 @@ function Ring({ p, m, axis = 'x', r = 0.1 }: { p: [number, number, number]; m: T
 }
 
 /** A rectangular frame of four thin bars: used for crowns (zer) and borders. */
-function Frame({ y, sx, sz, h, t, m }: { y: number; sx: number; sz: number; h: number; t: number; m: THREE.Material }) {
+export function Frame({ y, sx, sz, h, t, m }: { y: number; sx: number; sz: number; h: number; t: number; m: THREE.Material }) {
   return (
     <group position={[0, y, 0]}>
       <Box p={[0, 0, sz / 2 - t / 2]} s={[sx, h, t]} m={m} />
@@ -68,7 +75,7 @@ function Frame({ y, sx, sz, h, t, m }: { y: number; sx: number; sz: number; h: n
 
 // ───────────────────────── Ark & mercy seat (Ex 25:10-22) ─────────────────────────
 
-export function Ark() {
+export function Ark({ at = POS.ark, rotY = Math.PI / 2, feature = 'ark', presence = true }: Placement & { presence?: boolean } = {}) {
   const g = gold();
   const L = 2.5;
   const W = 1.5;
@@ -77,7 +84,7 @@ export function Ark() {
   return (
     // Length runs north–south and the poles east–west, so from the door you face the long side
     // and see both cherubim; the pole ends press toward the veil (1 Kgs 8:8; Rashi on Ex 25:12).
-    <group position={[POS.ark[0], 0, POS.ark[1]]} rotation={[0, Math.PI / 2, 0]} userData={{ feature: 'ark' }}>
+    <group position={[at[0], 0, at[1]]} rotation={[0, rotY, 0]} userData={{ feature }}>
       {/* four feet */}
       {[
         [1, 1],
@@ -108,14 +115,14 @@ export function Ark() {
         <Cherub />
       </group>
       {/* the Presence above the mercy seat (illustrative) */}
-      <pointLight position={[0, H + 1.9, 0]} color="#fff2c4" intensity={3.5} distance={9} decay={1.6} />
+      {presence && <pointLight position={[0, H + 1.9, 0]} color="#fff2c4" intensity={3.5} distance={9} decay={1.6} />}
     </group>
   );
 }
 
 // ───────────────────────── Table of showbread (Ex 25:23-30) ─────────────────────────
 
-export function Table() {
+export function Table({ at = POS.table, rotY = 0, feature = 'table' }: Placement = {}) {
   const g = gold();
   const L = 2;
   const W = 1;
@@ -129,7 +136,7 @@ export function Table() {
     [-1, -1],
   ];
   return (
-    <group position={[POS.table[0], 0, POS.table[1]]} userData={{ feature: 'table' }}>
+    <group position={[at[0], 0, at[1]]} rotation={[0, rotY, 0]} userData={{ feature }}>
       <Box p={[0, H - 0.04, 0]} s={[L, 0.08, W]} m={g} />
       {legs.map(([sx, sz], i) => (
         <Box key={i} p={[sx * (L / 2 - 0.07), (H - 0.08) / 2, sz * (W / 2 - 0.07)]} s={[0.1, H - 0.08, 0.1]} m={g} />
@@ -177,7 +184,7 @@ export function Table() {
 
 // ───────────────────────── Golden lampstand (Ex 25:31-40) ─────────────────────────
 
-function Flame({ p }: { p: [number, number, number] }) {
+export function Flame({ p }: { p: [number, number, number] }) {
   const ref = useRef<THREE.Mesh>(null);
   const seed = useMemo(() => Math.random() * 10, []);
   useFrame(({ clock }) => {
@@ -213,7 +220,7 @@ function taperedTube(curve: THREE.Curve<THREE.Vector3>, r0: number, r1: number, 
 }
 
 /** Lathe from (radius, y) pairs, smoothed through a spline. */
-function lathe(pts: [number, number][], seg = 14, div = 24) {
+export function lathe(pts: [number, number][], seg = 14, div = 24) {
   const spline = new THREE.SplineCurve(pts.map(([x, y]) => new THREE.Vector2(x, y)));
   return new THREE.LatheGeometry(spline.getPoints(div), seg);
 }
@@ -269,7 +276,7 @@ function OilLamp({ p, m }: { p: [number, number, number]; m: THREE.Material }) {
  * out of its sides like almond boughs, almond blossoms along every branch, standing on three feet.
  * Its front (lamps and light) faces local -z; the parent turns it to face the entrance.
  */
-export function Menorah() {
+export function Menorah({ at = POS.menorah, rotY = -Math.PI / 2, feature = 'menorah', light: withLight = true }: Placement & { light?: boolean } = {}) {
   const m = pureGold();
   const H = 3; // not specified in Scripture; tradition gives 18 handbreadths
   const radii = [0.36, 0.7, 1.04];
@@ -338,7 +345,7 @@ export function Menorah() {
 
   const lampTops: [number, number, number][] = [[0, H - 0.12, 0], ...parts.branches.map((b) => b.tip)];
   return (
-    <group position={[POS.menorah[0], 0, POS.menorah[1]]} rotation={[0, -Math.PI / 2, 0]} userData={{ feature: 'menorah' }}>
+    <group position={[at[0], 0, at[1]]} rotation={[0, rotY, 0]} userData={{ feature }}>
       <mesh geometry={parts.shaft} material={m} castShadow />
       {parts.legs.map((l, i) => (
         <group key={i}>
@@ -360,7 +367,7 @@ export function Menorah() {
       {lampTops.map((p, i) => (
         <OilLamp key={i} p={p} m={m} />
       ))}
-      <pointLight ref={light} position={[0, H + 0.4, -0.6]} color="#ffbe6a" intensity={9} distance={30} decay={1.3} />
+      {withLight && <pointLight ref={light} position={[0, H + 0.4, -0.6]} color="#ffbe6a" intensity={9} distance={30} decay={1.3} />}
       {/* tongs and snuff dishes (Ex 25:38) */}
       <mesh position={[0.5, 0.03, -0.3]} material={m}>
         <cylinderGeometry args={[0.1, 0.08, 0.04, 10]} />
@@ -371,7 +378,7 @@ export function Menorah() {
 
 // ───────────────────────── Altar of incense (Ex 30:1-10) ─────────────────────────
 
-function Smoke({ y, spread, count, color, scale = 1 }: { y: number; spread: number; count: number; color: string; scale?: number }) {
+export function Smoke({ y, spread, count, color, scale = 1 }: { y: number; spread: number; count: number; color: string; scale?: number }) {
   const group = useRef<THREE.Group>(null);
   const mat = useMemo(() => new THREE.MeshToonMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false }), [color]);
   const seeds = useMemo(() => Array.from({ length: count }, (_, i) => ({ o: i / count, a: Math.random() * 6.28 })), [count]);
@@ -398,12 +405,12 @@ function Smoke({ y, spread, count, color, scale = 1 }: { y: number; spread: numb
   );
 }
 
-export function IncenseAltar() {
+export function IncenseAltar({ at = POS.incense, feature = 'incense' }: Placement = {}) {
   const g = gold();
   const S = 1;
   const H = 2;
   return (
-    <group position={[POS.incense[0], 0, POS.incense[1]]} userData={{ feature: 'incense' }}>
+    <group position={[at[0], 0, at[1]]} userData={{ feature }}>
       <Box p={[0, H / 2, 0]} s={[S, H, S]} m={g} />
       {/* crown of gold round about (Ex 30:3) */}
       <Frame y={H - 0.12} sx={S + 0.08} sz={S + 0.08} h={0.1} t={0.05} m={pureGold()} />

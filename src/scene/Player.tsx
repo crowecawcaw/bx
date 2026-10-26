@@ -1,26 +1,31 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { SITE } from '../sites';
 import { useStore } from '../store';
-import { DEBUG, EYE_HEIGHT, regionOf, START } from './dims';
-import { buildNav, findPath, walkable } from './nav';
+import { DEBUG, EYE_HEIGHT } from './dims';
+import { buildNav, findPath, heightAt, linkAt, walkable, type Waypoint } from './nav';
 
 /** Mutable player state shared with the HUD (mini-map) without React re-renders. */
 export const player = {
-  x: START.x,
-  z: START.z,
-  yaw: START.yaw,
+  x: SITE.start.x,
+  z: SITE.start.z,
+  yaw: SITE.start.yaw,
   pitch: -0.04,
-  path: [] as [number, number][],
+  /** Which floor we stand on (storeys of the side chambers); 0 is the ground. */
+  level: 0,
+  /** Eye-level ground height, eased so steps don't jolt. */
+  y: 0,
+  path: [] as Waypoint[],
   lastLook: 0,
   walkStart: 0,
-  target: null as [number, number] | null,
+  target: null as Waypoint | null,
 };
 
 const SPEED = 5.5; // cubits per second (≈ 2.5 m/s)
 
-export function walkTo(x: number, z: number) {
-  const p = findPath(player.x, player.z, x, z);
+export function walkTo(x: number, z: number, level = player.level) {
+  const p = findPath(player.x, player.z, player.level, x, z, level);
   if (!p) return false;
   player.path = p;
   player.walkStart = performance.now();
@@ -28,8 +33,47 @@ export function walkTo(x: number, z: number) {
   return true;
 }
 
+/** A full-screen veil used to blink between places. */
+let veil: HTMLDivElement | null = null;
+let teleporting = false;
+function getVeil() {
+  if (!veil) {
+    veil = document.createElement('div');
+    Object.assign(veil.style, {
+      position: 'fixed', inset: '0', background: '#000', opacity: '0',
+      pointerEvents: 'none', zIndex: '50', transition: 'opacity 110ms ease-in',
+    });
+    document.body.appendChild(veil);
+  }
+  return veil;
+}
+
+/** Blink to a spot: quick fade to black, move, fade back in. Only to places you could walk to. */
+export function teleportTo(x: number, z: number, level = player.level) {
+  if (teleporting) return false;
+  const p = findPath(player.x, player.z, player.level, x, z, level);
+  if (!p) return false;
+  const [tx, tz, tl] = p[p.length - 1];
+  player.path = [];
+  player.target = null;
+  teleporting = true;
+  const v = getVeil();
+  v.style.transition = 'opacity 110ms ease-in';
+  v.style.opacity = '1';
+  setTimeout(() => {
+    player.x = tx;
+    player.z = tz;
+    player.level = tl;
+    player.y = heightAt(tx, tz, tl);
+    v.style.transition = 'opacity 180ms ease-out';
+    v.style.opacity = '0';
+    setTimeout(() => (teleporting = false), 180);
+  }, 130);
+  return true;
+}
+
 // Handy for debugging and automated screenshots.
-if (DEBUG) (window as unknown as Record<string, unknown>).__tabernacle = { player, useStore, walkTo };
+if (DEBUG) (window as unknown as Record<string, unknown>).__tabernacle = { player, useStore, walkTo, lookAt, teleportTo };
 
 /** Turn the camera to face a point. */
 export function lookAt(x: number, z: number) {
@@ -55,11 +99,12 @@ export function Player() {
   useEffect(() => {
     buildNav(open);
     // re-plan if a curtain closed across our path
-    if (player.target) walkTo(player.target[0], player.target[1]);
+    if (player.target) walkTo(player.target[0], player.target[1], player.target[2]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navVersion]);
 
-  // Drag to look (mouse or one finger). The view follows the finger 1:1, like grabbing the scene.
+  // Drag to look (mouse or one finger), like a game's look stick: drag right to turn right, up to look up.
+  // Half a turn for a swipe across the narrow side of the screen, so a portrait phone turns quickly.
   useEffect(() => {
     const el = gl.domElement;
     let active: number | null = null;
@@ -83,10 +128,9 @@ export function Player() {
       const dy = e.clientY - sy;
       if (!dragging && Math.hypot(dx, dy) < 6) return;
       dragging = true;
-      // radians per pixel so a point under the finger stays under the finger
-      const k = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov) / el.clientHeight;
-      player.yaw = yaw0 + dx * k;
-      player.pitch = THREE.MathUtils.clamp(pitch0 + dy * k, -1.2, 1.2);
+      const k = Math.PI / Math.min(el.clientWidth, el.clientHeight);
+      player.yaw = yaw0 - dx * k;
+      player.pitch = THREE.MathUtils.clamp(pitch0 - dy * k * 0.6, -1.2, 1.2);
       player.lastLook = performance.now();
     };
     const up = (e: PointerEvent) => {
@@ -130,16 +174,20 @@ export function Player() {
       player.target = null;
       const nx = player.x - Math.sin(player.yaw) * fwd * SPEED * dt;
       const nz = player.z - Math.cos(player.yaw) * fwd * SPEED * dt;
-      if (walkable(nx, nz)) {
+      // on a stair, step onto the other floor where only it continues
+      const other = linkAt(player.x, player.z, player.level);
+      if (other >= 0 && !walkable(nx, nz, player.level) && walkable(nx, nz, other)) player.level = other;
+      const L = player.level;
+      if (walkable(nx, nz, L)) {
         player.x = nx;
         player.z = nz;
-      } else if (walkable(nx, player.z)) player.x = nx;
-      else if (walkable(player.x, nz)) player.z = nz;
+      } else if (walkable(nx, player.z, L)) player.x = nx;
+      else if (walkable(player.x, nz, L)) player.z = nz;
     }
 
     // follow the planned path
     if (player.path.length) {
-      const [tx, tz] = player.path[0];
+      const [tx, tz, tl] = player.path[0];
       const dx = tx - player.x;
       const dz = tz - player.z;
       const d = Math.hypot(dx, dz);
@@ -147,6 +195,7 @@ export function Player() {
       if (d <= step) {
         player.x = tx;
         player.z = tz;
+        player.level = tl;
         player.path.shift();
         if (!player.path.length) player.target = null;
       } else {
@@ -176,19 +225,22 @@ export function Player() {
     // gentle head bob while walking
     const walking = player.path.length > 0 || fwd !== 0;
     const bob = walking ? Math.sin(state.clock.elapsedTime * 9) * 0.04 : 0;
-    camera.position.set(player.x, EYE_HEIGHT + bob, player.z);
+    const ground = heightAt(player.x, player.z, player.level);
+    player.y = Math.abs(ground - player.y) > 3 ? ground : player.y + (ground - player.y) * Math.min(1, dt * 12);
+    camera.position.set(player.x, player.y + EYE_HEIGHT + bob, player.z);
     camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
 
     if (marker.current) {
       marker.current.visible = !!player.target;
       if (player.target) {
-        marker.current.position.set(player.target[0], 0.03, player.target[1]);
+        const [mx, mz, ml] = player.target;
+        marker.current.position.set(mx, heightAt(mx, mz, ml) + 0.05, mz);
         const s = 1 + Math.sin(state.clock.elapsedTime * 5) * 0.15;
         marker.current.scale.set(s, s, s);
       }
     }
 
-    const r = regionOf(player.x, player.z);
+    const r = SITE.regionOf(player.x, player.z);
     if (useStore.getState().region !== r) setRegion(r);
   });
 
