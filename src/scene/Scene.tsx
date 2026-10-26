@@ -9,7 +9,7 @@ import { TempleWorld } from '../temple/TempleWorld';
 import { Courtyard } from './Courtyard';
 import { World } from './Environment';
 import { Ark, BronzeAltar, IncenseAltar, Laver, Menorah, Table } from './Furniture';
-import { lookAt, player, Player, walkTo } from './Player';
+import { lookAt, player, Player, teleportTo, walkTo } from './Player';
 import { DEBUG } from './dims';
 import { levelFor } from './nav';
 import { Post } from './Post';
@@ -43,8 +43,22 @@ function onTap(e: ThreeEvent<MouseEvent>) {
       return;
     }
   }
-  walkTo(p.x, p.z, levelFor(p.x, p.y, p.z, player.level));
+  const level = levelFor(p.x, p.y, p.z, player.level);
+  // a second tap close to the first, soon after, blinks you there instead of walking
+  const now = performance.now();
+  const sx = e.nativeEvent.clientX;
+  const sy = e.nativeEvent.clientY;
+  if (now - lastTap.t < 320 && Math.hypot(sx - lastTap.x, sy - lastTap.y) < 40) {
+    lastTap.t = 0;
+    teleportTo(p.x, p.z, level);
+    return;
+  }
+  lastTap.t = now;
+  lastTap.x = sx;
+  lastTap.y = sy;
+  walkTo(p.x, p.z, level);
 }
+const lastTap = { t: 0, x: 0, y: 0 };
 
 function Bubbles() {
   const [visible, setVisible] = useState<string[]>([]);

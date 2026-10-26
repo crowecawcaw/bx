@@ -144,7 +144,7 @@ function buildHouse() {
   m.box('gold', P0 - 0.1, P1 + 0.1, ORACLE_DOOR.height - 0.1, ORACLE_DOOR.height + 0.25, -ORACLE_DOOR.half - 0.1, ORACLE_DOOR.half + 0.1);
 
   // floors of fir overlaid with gold (1 Kgs 6:15, 30), ceilings, roof
-  m.box('floor', oracleX, frontX, -0.05, 0.02, -HW, HW);
+  m.box('floor', oracleX, frontX, -0.05, 0.1, -HW, HW);
   m.box('ceiling', oracleX, P0, OH, OH + 0.4, -HW, HW);
   m.box('ceiling', P1, frontX, H - 0.05, H, -HW, HW);
   m.box('roof', BACK_AT(2), frontX, H, H + 1, -(OUT - 2), OUT - 2);

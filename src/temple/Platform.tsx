@@ -52,7 +52,7 @@ export function Platform() {
         geometry={top}
         material={pave}
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[(PLAT.minX + PLAT.maxX) / 2, PLAT.h + 0.01, 0]}
+        position={[(PLAT.minX + PLAT.maxX) / 2, PLAT.h + 0.04, 0]}
         receiveShadow
       />
     </group>

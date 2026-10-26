@@ -33,8 +33,47 @@ export function walkTo(x: number, z: number, level = player.level) {
   return true;
 }
 
+/** A full-screen veil used to blink between places. */
+let veil: HTMLDivElement | null = null;
+let teleporting = false;
+function getVeil() {
+  if (!veil) {
+    veil = document.createElement('div');
+    Object.assign(veil.style, {
+      position: 'fixed', inset: '0', background: '#000', opacity: '0',
+      pointerEvents: 'none', zIndex: '50', transition: 'opacity 110ms ease-in',
+    });
+    document.body.appendChild(veil);
+  }
+  return veil;
+}
+
+/** Blink to a spot: quick fade to black, move, fade back in. Only to places you could walk to. */
+export function teleportTo(x: number, z: number, level = player.level) {
+  if (teleporting) return false;
+  const p = findPath(player.x, player.z, player.level, x, z, level);
+  if (!p) return false;
+  const [tx, tz, tl] = p[p.length - 1];
+  player.path = [];
+  player.target = null;
+  teleporting = true;
+  const v = getVeil();
+  v.style.transition = 'opacity 110ms ease-in';
+  v.style.opacity = '1';
+  setTimeout(() => {
+    player.x = tx;
+    player.z = tz;
+    player.level = tl;
+    player.y = heightAt(tx, tz, tl);
+    v.style.transition = 'opacity 180ms ease-out';
+    v.style.opacity = '0';
+    setTimeout(() => (teleporting = false), 180);
+  }, 130);
+  return true;
+}
+
 // Handy for debugging and automated screenshots.
-if (DEBUG) (window as unknown as Record<string, unknown>).__tabernacle = { player, useStore, walkTo, lookAt };
+if (DEBUG) (window as unknown as Record<string, unknown>).__tabernacle = { player, useStore, walkTo, lookAt, teleportTo };
 
 /** Turn the camera to face a point. */
 export function lookAt(x: number, z: number) {

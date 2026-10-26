@@ -122,7 +122,7 @@ export function Courts() {
         geometry={innerGeo}
         material={mats.inner}
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[(INNER.minX + INNER.maxX) / 2, 0.02, (INNER.minZ + INNER.maxZ) / 2]}
+        position={[(INNER.minX + INNER.maxX) / 2, 0.06, (INNER.minZ + INNER.maxZ) / 2]}
         receiveShadow
       />
       <GateLeaves c={INNER} id="gate" />
