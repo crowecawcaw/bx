@@ -1,13 +1,26 @@
 import { useState } from 'react';
 import { Scene } from './scene/Scene';
-import { SITE_ID, siteHref } from './site';
+import { SITE_ID, siteHref, type SiteId } from './site';
 import { Ui } from './ui/Ui';
+
+const TABS: [SiteId, string][] = [
+  ['tabernacle', 'Tabernacle'],
+  ['temple', 'Solomon’s Temple'],
+  ['sea', 'Red Sea'],
+];
 
 function Tabs() {
   return (
-    <nav className="tabs" aria-label="Choose a sanctuary">
-      {SITE_ID === 'tabernacle' ? <span>Tabernacle</span> : <a href={siteHref('tabernacle')}>Tabernacle</a>}
-      {SITE_ID === 'temple' ? <span>Solomon’s Temple</span> : <a href={siteHref('temple')}>Solomon’s Temple</a>}
+    <nav className="tabs" aria-label="Choose an experience">
+      {TABS.map(([id, name]) =>
+        id === SITE_ID ? (
+          <span key={id}>{name}</span>
+        ) : (
+          <a key={id} href={siteHref(id)}>
+            {name}
+          </a>
+        ),
+      )}
     </nav>
   );
 }
@@ -58,6 +71,32 @@ function TempleIntro() {
   );
 }
 
+function SeaIntro() {
+  return (
+    <>
+      <h1>The Red Sea</h1>
+      <p className="verse">
+        “And the children of Israel went into the midst of the sea upon the dry ground: and the waters were a wall
+        unto them on their right hand, and on their left.”
+        <br />
+        <span>Exodus 14:22</span>
+      </p>
+      <p>
+        Walk the seabed with the multitude, between walls of standing water, toward the dawn on the far shore. The pillar
+        of cloud stands behind you.
+      </p>
+      <ul>
+        <li>Tap the seabed to walk · drag to look</li>
+        <li>Double-tap to jump there</li>
+        <li>Tap the info bubbles for verses and details</li>
+      </ul>
+      <button className="primary">Step onto the seabed</button>
+    </>
+  );
+}
+
+const INTRO = { tabernacle: TabernacleIntro, temple: TempleIntro, sea: SeaIntro }[SITE_ID];
+
 export function App() {
   const [entered, setEntered] = useState(false);
   return (
@@ -70,7 +109,7 @@ export function App() {
             <div onClick={(e) => e.stopPropagation()}>
               <Tabs />
             </div>
-            {SITE_ID === 'temple' ? <TempleIntro /> : <TabernacleIntro />}
+            <INTRO />
           </div>
         </div>
       )}

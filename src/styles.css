@@ -162,3 +162,30 @@ button { font: inherit; color: inherit; cursor: pointer; }
   text-decoration: none; color: var(--ink); background: var(--paper-2);
 }
 .intro .tabs span { background: var(--gold); color: #fff; }
+
+/* Red Sea map */
+.minimap.sea { width: min(70vw, 340px); background: #2c6f80; }
+.mm-sea { fill: #2c6f80; }
+.mm-path { fill: #e6d2a6; }
+.mm-land { fill: #c9a66e; }
+.mm-sealevel { stroke: #fff; stroke-width: 4; stroke-dasharray: 10 8; }
+.mm-cloud { fill: #cbbba4; stroke: var(--ink); stroke-width: 3; opacity: 0.9; }
+.minimap.sea .mm-label.big { font-size: 34px; fill: #fff; }
+
+/* The waters return: underwater murk with rising bubbles, white foam, and a caption on waking */
+.sea-wash { position: fixed; inset: 0; z-index: 45; pointer-events: none; display: none; }
+.sea-wash.on { display: block; }
+.sea-under, .sea-foam { position: absolute; inset: 0; opacity: 0; overflow: hidden; }
+.sea-under { background: radial-gradient(ellipse at 50% 20%, rgba(70, 170, 180, 0.85), rgba(6, 40, 58, 0.97) 70%); }
+.sea-under span {
+  position: absolute; bottom: -40px; border-radius: 50%; border: 2px solid rgba(220, 250, 255, 0.8);
+  background: rgba(200, 240, 250, 0.15); animation: sea-bubble 1.6s ease-in infinite;
+}
+@keyframes sea-bubble { to { transform: translate(18px, -115vh); } }
+.sea-foam { background: radial-gradient(circle at 50% 50%, #ffffff, #e6f6f7 60%, #cfeaec); }
+.sea-caption {
+  position: absolute; left: 0; right: 0; top: 42%; text-align: center; opacity: 0;
+  font-size: 22px; font-style: italic; color: #1d3a44; padding: 0 16px;
+}
+.sea-caption span { display: block; font-style: normal; font-size: 13px; margin-top: 6px; color: #4b6a72; }
+@media (prefers-reduced-motion: reduce) { .sea-under span { animation: none; } }

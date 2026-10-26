@@ -2,6 +2,8 @@ import { Html, PerformanceMonitor } from '@react-three/drei';
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { Sea } from '../sea/Sea';
+import { SeaWorld } from '../sea/SeaWorld';
 import { SITE } from '../sites';
 import { useStore, type CurtainId } from '../store';
 import { Temple } from '../temple/Temple';
@@ -20,6 +22,7 @@ const POST = !new URLSearchParams(location.search).has('nopost');
 const CURTAIN_REACH = SITE.reach;
 const FEATURES = SITE.features;
 const TEMPLE = SITE.id === 'temple';
+const SEA = SITE.id === 'sea';
 
 function tagOf(o: THREE.Object3D | null) {
   let curtain: CurtainId | undefined;
@@ -141,12 +144,14 @@ export function Scene() {
       />
       <ShadowWarmup />
       <Suspense fallback={null}>
-        <group raycast={() => null}>{TEMPLE ? <TempleWorld /> : <World />}</group>
+        <group raycast={() => null}>{SEA ? <SeaWorld /> : TEMPLE ? <TempleWorld /> : <World />}</group>
         <group onClick={onTap}>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]} visible={false} userData={{ ground: true }}>
             <planeGeometry args={[1000, 1000]} />
           </mesh>
-          {TEMPLE ? (
+          {SEA ? (
+            <Sea />
+          ) : TEMPLE ? (
             <Temple />
           ) : (
             <>
