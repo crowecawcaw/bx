@@ -188,12 +188,12 @@ function chambers(m: Mason) {
         const well = wells.find((st) => st.side === side);
         const zs = (a: number, b: number): [number, number] => (side > 0 ? [a, b] : [-b, -a]);
         if (well) {
-          m.box('cedar', CHAMBER_WEST, well.x0, y0 - 1, y0, ...zs(fz, CHAMBER_IN));
-          m.box('cedar', well.x1, CHAMBER_EAST, y0 - 1, y0, ...zs(fz, CHAMBER_IN));
-          m.box('cedar', well.x0, well.x1, y0 - 1, y0, ...zs(fz, well.zIn));
-        } else m.box('cedar', CHAMBER_WEST, CHAMBER_EAST, y0 - 1, y0, ...zs(fz, CHAMBER_IN));
+          m.box('cedar', CHAMBER_WEST, well.x0, y0 - 1, y0 + 0.04, ...zs(fz, CHAMBER_IN));
+          m.box('cedar', well.x1, CHAMBER_EAST, y0 - 1, y0 + 0.04, ...zs(fz, CHAMBER_IN));
+          m.box('cedar', well.x0, well.x1, y0 - 1, y0 + 0.04, ...zs(fz, well.zIn));
+        } else m.box('cedar', CHAMBER_WEST, CHAMBER_EAST, y0 - 1, y0 + 0.04, ...zs(fz, CHAMBER_IN));
       }
-      m.box('cedar', CHAMBER_WEST, fx, y0 - 1, y0, -fz, fz);
+      m.box('cedar', CHAMBER_WEST, fx, y0 - 1, y0 + 0.04, -fz, fz);
     }
     // cross walls with a doorway in each
     const dh = Math.min(3.8, y1 - y0 - 0.4);
