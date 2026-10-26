@@ -1,83 +1,42 @@
-import { COURT, PLAYER_RADIUS, POS, TENT } from './dims';
-import type { CurtainId } from '../store';
+import { SITE } from '../sites';
+import { PLAYER_RADIUS } from './dims';
 
-// Walkable grid over the camp area, 0.5 cubit cells.
+// Walkable grid over the site, 0.5 cubit cells.
 const RES = 0.5;
-export const NAV_MIN_X = -75;
-export const NAV_MAX_X = 80;
-export const NAV_MIN_Z = -50;
-export const NAV_MAX_Z = 50;
+const { minX: NAV_MIN_X, maxX: NAV_MAX_X, minZ: NAV_MIN_Z, maxZ: NAV_MAX_Z } = SITE.bounds;
 const W = Math.round((NAV_MAX_X - NAV_MIN_X) / RES);
 const H = Math.round((NAV_MAX_Z - NAV_MIN_Z) / RES);
 
-type Rect = [minX: number, minZ: number, maxX: number, maxZ: number];
-type Circle = [x: number, z: number, r: number];
-
-function staticObstacles(): { rects: Rect[]; circles: Circle[] } {
-  const t = 0.15;
-  const { minX, maxX, minZ, maxZ, gateWidth } = COURT;
-  const g = gateWidth / 2;
-  const rects: Rect[] = [
-    // court hangings
-    [minX - t, minZ - t, maxX + t, minZ + t],
-    [minX - t, maxZ - t, maxX + t, maxZ + t],
-    [minX - t, minZ, minX + t, maxZ],
-    [maxX - t, minZ, maxX + t, -g],
-    [maxX - t, g, maxX + t, maxZ],
-    // tent walls, including the coverings that reach the ground outside
-    [TENT.backX - 1.6, -TENT.halfWidth - 1.6, TENT.frontX + 0.2, -TENT.halfWidth],
-    [TENT.backX - 1.6, TENT.halfWidth, TENT.frontX + 0.2, TENT.halfWidth + 1.6],
-    [TENT.backX - 1.6, -TENT.halfWidth - 1.6, TENT.backX, TENT.halfWidth + 1.6],
-    // furniture (with poles)
-    [POS.ark[0] - 4.6, POS.ark[1] - 1.45, POS.ark[0] + 4.6, POS.ark[1] + 1.45],
-    [POS.incense[0] - 1.1, -0.6, POS.incense[0] + 1.1, 0.6],
-    [POS.table[0] - 2, POS.table[1] - 0.6, POS.table[0] + 2, POS.table[1] + 0.6],
-    [POS.menorah[0] - 0.5, POS.menorah[1] - 1.3, POS.menorah[0] + 0.5, POS.menorah[1] + 1.3],
-    [POS.altar[0] - 4.1, -3.1, POS.altar[0] + 4.1, 3.1],
-    [POS.altar[0] + 3, 3, POS.altar[0] + 4.4, 4.4], // utensils
-  ];
-  const circles: Circle[] = [[POS.laver[0], POS.laver[1], 1.5]];
-  // door and veil pillars
-  for (const z of DOOR_PILLARS_Z) circles.push([DOOR_PILLAR_X, z, 0.15]);
-  for (const z of VEIL_PILLARS_Z) circles.push([VEIL_PILLAR_X, z, 0.12]);
-  return { rects, circles };
-}
-
-export const DOOR_PILLARS_Z = [-4.75, -2.375, 0, 2.375, 4.75];
-export const DOOR_PILLAR_X = TENT.frontX + 0.3;
-export const DOOR_SCREEN_X = TENT.frontX + 0.62;
-export const VEIL_PILLAR_X = TENT.veilX - 0.25;
-export const VEIL_PILLARS_Z = [-3.75, -1.25, 1.25, 3.75];
-
-function curtainRect(id: CurtainId): Rect {
-  if (id === 'gate') return [COURT.maxX - 0.15, -COURT.gateWidth / 2, COURT.maxX + 0.15, COURT.gateWidth / 2];
-  if (id === 'door') return [DOOR_PILLAR_X, -TENT.halfWidth, DOOR_SCREEN_X + 0.1, TENT.halfWidth];
-  return [TENT.veilX - 0.1, -TENT.halfWidth, TENT.veilX + 0.15, TENT.halfWidth];
-}
-
 let grid = new Uint8Array(W * H);
 
-export function buildNav(open: Record<CurtainId, boolean>) {
+/** Marks every cell whose centre lies within the player's radius of an obstacle. */
+export function buildNav(open: Record<string, boolean>) {
   const g = new Uint8Array(W * H);
-  const { rects, circles } = staticObstacles();
-  for (const id of ['gate', 'door', 'veil'] as CurtainId[]) if (!open[id]) rects.push(curtainRect(id));
+  const { rects, circles } = SITE.obstacles(open);
   const r = PLAYER_RADIUS;
-  for (let j = 0; j < H; j++) {
-    const z = NAV_MIN_Z + (j + 0.5) * RES;
-    for (let i = 0; i < W; i++) {
-      const x = NAV_MIN_X + (i + 0.5) * RES;
-      let blocked = i === 0 || j === 0 || i === W - 1 || j === H - 1;
-      for (let k = 0; !blocked && k < rects.length; k++) {
-        const q = rects[k];
-        blocked = x > q[0] - r && x < q[2] + r && z > q[1] - r && z < q[3] + r;
+  const col = (x: number) => (x - NAV_MIN_X) / RES - 0.5;
+  const row = (z: number) => (z - NAV_MIN_Z) / RES - 0.5;
+  const i0 = (x: number) => Math.max(0, Math.floor(col(x)) + 1);
+  const i1 = (x: number) => Math.min(W - 1, Math.ceil(col(x)) - 1);
+  const j0 = (z: number) => Math.max(0, Math.floor(row(z)) + 1);
+  const j1 = (z: number) => Math.min(H - 1, Math.ceil(row(z)) - 1);
+  for (const q of rects) {
+    for (let j = j0(q[1] - r); j <= j1(q[3] + r); j++) g.fill(1, j * W + i0(q[0] - r), j * W + i1(q[2] + r) + 1);
+  }
+  for (const c of circles) {
+    const R = c[2] + r;
+    for (let j = j0(c[1] - R); j <= j1(c[1] + R); j++) {
+      const z = NAV_MIN_Z + (j + 0.5) * RES;
+      for (let i = i0(c[0] - R); i <= i1(c[0] + R); i++) {
+        const x = NAV_MIN_X + (i + 0.5) * RES;
+        if ((x - c[0]) ** 2 + (z - c[1]) ** 2 < R * R) g[j * W + i] = 1;
       }
-      for (let k = 0; !blocked && k < circles.length; k++) {
-        const c = circles[k];
-        blocked = (x - c[0]) ** 2 + (z - c[1]) ** 2 < (c[2] + r) ** 2;
-      }
-      g[j * W + i] = blocked ? 1 : 0;
     }
   }
+  // the edge of the grid
+  g.fill(1, 0, W);
+  g.fill(1, (H - 1) * W, H * W);
+  for (let j = 0; j < H; j++) g[j * W] = g[j * W + W - 1] = 1;
   grid = g;
 }
 

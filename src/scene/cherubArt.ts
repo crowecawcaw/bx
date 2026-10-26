@@ -51,7 +51,7 @@ function blade(ctx: CanvasRenderingContext2D, x: number, y: number, a: number, l
 /** One wing (the right one; the left is mirrored): a crescent that rises from the shoulder,
  *  swells outward and curls back in over the head, with a band of scaled coverts along its
  *  inner edge over a fan of broad, overlapping flight feathers. */
-function drawWing(ctx: CanvasRenderingContext2D, wing: string, cover: string, line: string) {
+function drawWing(ctx: CanvasRenderingContext2D, wing: string, cover: string, line: string, thread: string) {
   const b0: Pt = [10, -30], b1: Pt = [46, -30], b2: Pt = [70, -48], b3: Pt = [60, -72];
   const at = (u: number) => bez(b0, b1, b2, b3, u);
   // outward normal: the tangent turned a quarter clockwise (canvas y runs down)
@@ -130,7 +130,7 @@ function drawWing(ctx: CanvasRenderingContext2D, wing: string, cover: string, li
   ctx.fill();
   ctx.stroke();
   // a staggered row of small scale-feathers inside the band, in linen thread
-  ctx.strokeStyle = LINEN;
+  ctx.strokeStyle = thread;
   ctx.lineWidth = 1.5;
   for (let i = 0; i < m - 1; i++) {
     const u = (i + 0.9) / m;
@@ -145,8 +145,18 @@ function drawWing(ctx: CanvasRenderingContext2D, wing: string, cover: string, li
   ctx.strokeStyle = line;
 }
 
-export function drawCherub(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number, body: string, wing: string, line: string) {
-  const cover = wing === SCARLET ? PURPLE : SCARLET;
+/** `cover` (coverts and hair) and `thread` (feather lines) default to the woven colours; carved gold passes its own. */
+export function drawCherub(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  s: number,
+  body: string,
+  wing: string,
+  line: string,
+  cover = wing === SCARLET ? PURPLE : SCARLET,
+  thread = LINEN,
+) {
   ctx.save();
   ctx.translate(cx, cy);
   ctx.scale(s / 100, s / 100);
@@ -157,7 +167,7 @@ export function drawCherub(ctx: CanvasRenderingContext2D, cx: number, cy: number
   for (const side of [-1, 1]) {
     ctx.save();
     ctx.scale(side, 1);
-    drawWing(ctx, wing, cover, line);
+    drawWing(ctx, wing, cover, line, thread);
     ctx.restore();
   }
 

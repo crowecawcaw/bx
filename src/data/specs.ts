@@ -1,5 +1,3 @@
-import type { Region } from '../scene/dims';
-
 export interface Requirement {
   text: string;
   ref: string;
@@ -12,7 +10,7 @@ export interface Feature {
   /** World position (cubits) of the info bubble. */
   bubble: [number, number, number];
   /** Regions from which the bubble is visible. */
-  regions: Region[];
+  regions: string[];
   /** Show the bubble when the player is within this distance. */
   radius: number;
   summary: string;

@@ -1,15 +1,16 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { SITE } from '../sites';
 import { useStore } from '../store';
-import { DEBUG, EYE_HEIGHT, regionOf, START } from './dims';
+import { DEBUG, EYE_HEIGHT } from './dims';
 import { buildNav, findPath, walkable } from './nav';
 
 /** Mutable player state shared with the HUD (mini-map) without React re-renders. */
 export const player = {
-  x: START.x,
-  z: START.z,
-  yaw: START.yaw,
+  x: SITE.start.x,
+  z: SITE.start.z,
+  yaw: SITE.start.yaw,
   pitch: -0.04,
   path: [] as [number, number][],
   lastLook: 0,
@@ -29,7 +30,7 @@ export function walkTo(x: number, z: number) {
 }
 
 // Handy for debugging and automated screenshots.
-if (DEBUG) (window as unknown as Record<string, unknown>).__tabernacle = { player, useStore, walkTo };
+if (DEBUG) (window as unknown as Record<string, unknown>).__tabernacle = { player, useStore, walkTo, lookAt };
 
 /** Turn the camera to face a point. */
 export function lookAt(x: number, z: number) {
@@ -188,7 +189,7 @@ export function Player() {
       }
     }
 
-    const r = regionOf(player.x, player.z);
+    const r = SITE.regionOf(player.x, player.z);
     if (useStore.getState().region !== r) setRegion(r);
   });
 

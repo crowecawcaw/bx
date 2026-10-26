@@ -5,9 +5,16 @@ import fs from 'node:fs';
 
 const SRC = 'https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_kjv.json';
 const WANT = {
-  Exodus: [25, 26, 27, 30, 31, 35, 36, 37, 38, 39, 40],
+  // the tabernacle
+  Exodus: [20, 25, 26, 27, 30, 31, 35, 36, 37, 38, 39, 40],
   Leviticus: [24],
   Numbers: [4],
+  // Solomon's Temple
+  '1 Kings': [5, 6, 7, 8],
+  '2 Kings': [25],
+  '1 Chronicles': [28],
+  '2 Chronicles': [2, 3, 4, 5, 7],
+  Jeremiah: [52],
   Hebrews: [9],
 };
 

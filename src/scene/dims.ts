@@ -45,6 +45,12 @@ export const EYE_HEIGHT = 3.7; // ≈ 1.7 m
 export const PLAYER_RADIUS = 0.6;
 export const START = { x: 64, z: 6, yaw: Math.PI / 2 + 0.12 };
 
+export const DOOR_PILLARS_Z = [-4.75, -2.375, 0, 2.375, 4.75];
+export const DOOR_PILLAR_X = TENT.frontX + 0.3;
+export const DOOR_SCREEN_X = TENT.frontX + 0.62;
+export const VEIL_PILLAR_X = TENT.veilX - 0.25;
+export const VEIL_PILLARS_Z = [-3.75, -1.25, 1.25, 3.75];
+
 export type Region = 'camp' | 'court' | 'holy' | 'holiest';
 
 export function regionOf(x: number, z: number): Region {

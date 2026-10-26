@@ -1,7 +1,8 @@
 import { create } from 'zustand';
-import type { Region } from './scene/dims';
+import { SITE } from './sites';
 
-export type CurtainId = 'gate' | 'door' | 'veil';
+/** A curtain or door that can be tapped open (ids come from the site definition). */
+export type CurtainId = string;
 export type Panel = null | 'specs' | 'scripture' | 'help';
 
 interface State {
@@ -17,14 +18,14 @@ interface State {
   scriptureQuery: string;
   openPanel: (p: Panel) => void;
   showScripture: (ref: string) => void;
-  region: Region;
-  setRegion: (r: Region) => void;
+  region: string;
+  setRegion: (r: string) => void;
   /** Bumped whenever the walkable grid needs rebuilding. */
   navVersion: number;
 }
 
 export const useStore = create<State>((set) => ({
-  open: { gate: false, door: false, veil: false },
+  open: Object.fromEntries(SITE.curtains.map((id) => [id, false])),
   toggleCurtain: (id) =>
     set((s) => ({ open: { ...s.open, [id]: !s.open[id] }, navVersion: s.navVersion + 1 })),
   layers: 4,
@@ -37,10 +38,10 @@ export const useStore = create<State>((set) => ({
     })),
   discovered: [],
   panel: null,
-  scriptureQuery: 'Exodus 25:8-9',
+  scriptureQuery: SITE.scripture,
   openPanel: (panel) => set({ panel }),
   showScripture: (ref) => set({ panel: 'scripture', scriptureQuery: ref }),
-  region: 'camp',
+  region: SITE.regionOf(SITE.start.x, SITE.start.z),
   setRegion: (region) => set({ region }),
   navVersion: 0,
 }));

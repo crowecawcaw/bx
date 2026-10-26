@@ -12,7 +12,7 @@ type Draw = (ctx: CanvasRenderingContext2D, w: number, h: number) => void;
 
 const cache = new Map<string, THREE.CanvasTexture>();
 
-function make(key: string, w: number, h: number, draw: Draw, repeat?: [number, number], color = true) {
+export function make(key: string, w: number, h: number, draw: Draw, repeat?: [number, number], color = true) {
   const hit = cache.get(key);
   if (hit) return hit;
   const c = document.createElement('canvas');
@@ -32,7 +32,7 @@ function make(key: string, w: number, h: number, draw: Draw, repeat?: [number, n
 }
 
 // Deterministic pseudo-random so textures look the same on every load.
-function rng(seed: number) {
+export function rng(seed: number) {
   let s = seed >>> 0;
   return () => {
     s = (s * 1664525 + 1013904223) >>> 0;
@@ -61,7 +61,7 @@ function weave(ctx: CanvasRenderingContext2D, w: number, h: number, step: number
   }
 }
 
-function noise(ctx: CanvasRenderingContext2D, w: number, h: number, n: number, rgb: string, a: number, seed = 7, size = 2) {
+export function noise(ctx: CanvasRenderingContext2D, w: number, h: number, n: number, rgb: string, a: number, seed = 7, size = 2) {
   const r = rng(seed);
   for (let i = 0; i < n; i++) {
     ctx.fillStyle = `rgba(${rgb},${r() * a})`;
