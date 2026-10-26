@@ -8,7 +8,9 @@ import {
   INNER,
   OUT,
   PILLAR,
+  PLAT,
   PORCH,
+  STEPS,
   POS,
   RAMP,
   SEA,
@@ -29,7 +31,9 @@ export function TempleMap() {
       <rect {...rect(GREAT.minX, GREAT.minZ, GREAT.maxX, GREAT.maxZ)} className="mm-great" />
       <rect {...rect(INNER.minX, INNER.minZ, INNER.maxX, INNER.maxZ)} className="mm-court" />
       <line x1={INNER.maxX} y1={-INNER.gate} x2={INNER.maxX} y2={INNER.gate} className={open.gate ? 'mm-gate open' : 'mm-gate'} />
-      {/* house with its chambers, and the porch */}
+      {/* the platform and its steps, the house with its chambers, and the porch */}
+      <rect {...rect(PLAT.minX, -PLAT.halfZ, PLAT.maxX, PLAT.halfZ)} className="mm-ramp" />
+      <rect {...rect(PLAT.maxX, -STEPS.halfZ, PLAT.maxX + STEPS.run, STEPS.halfZ)} className="mm-ramp" />
       <rect {...rect(CHAMBER_BACK, -CHAMBER_OUT, OUT, CHAMBER_OUT)} className="mm-stone" />
       <rect {...rect(PORCH.backX, -OUT, PORCH.faceX, OUT)} className="mm-stone" />
       <rect {...rect(HOUSE.oracleX, -hw, HOUSE.frontX, hw)} className="mm-goldroom" />

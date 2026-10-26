@@ -21,7 +21,13 @@ export interface SiteDef {
   curtains: string[];
   /** How close (cubits) you must be to open or close one. */
   reach: number;
-  obstacles: (open: Record<string, boolean>) => { rects: Rect[]; circles: Circle[] };
+  /** Walkable floors stacked over one another (storeys of chambers). Default 1. */
+  levels?: number;
+  obstacles: (open: Record<string, boolean>, level: number) => { rects: Rect[]; circles: Circle[] };
+  /** Stairs: inside `rect`, both levels are walkable at the same height and you may pass between them. */
+  links?: { rect: Rect; a: number; b: number }[];
+  /** Height of the floor underfoot (ramps, steps, platforms, storeys). Default 0. */
+  heightAt?: (x: number, z: number, level: number) => number;
   /** First passage shown in the Scripture panel. */
   scripture: string;
   /** True if the Layers button applies (the tent's four coverings). */

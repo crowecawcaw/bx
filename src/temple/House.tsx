@@ -7,14 +7,23 @@ import { veilTexture } from '../scene/textures';
 import { useStore } from '../store';
 import {
   CHAMBER_BACK,
+  CHAMBER_DOOR,
+  CHAMBER_EAST,
   CHAMBER_IN,
   CHAMBER_OUT,
   CHAMBER_TOP,
+  CHAMBER_WEST,
+  CROSS_X,
+  CROSS_Z,
   DOOR,
   HOUSE,
   ORACLE_DOOR,
   OUT,
   PORCH,
+  STAIRS,
+  STOREY_Y,
+  houseFaceX,
+  houseFaceZ,
 } from './dims';
 import { Mason, worldUV } from './mason';
 import {
@@ -84,8 +93,10 @@ function buildHouse() {
     }
 
     // the chambers round about (1 Kgs 6:5-10): outer wall, east end wall and roof
-    m.box('stone', CHAMBER_BACK, OUT, 0, CHAMBER_TOP + 0.8, ...across(CHAMBER_IN, CHAMBER_OUT));
-    m.box('stone', OUT - 3, OUT, 0, CHAMBER_TOP + 0.8, ...across(OUT - 2, CHAMBER_IN));
+    const lights = CHAMBER_WINDOWS.flatMap((x) => STOREY_Y.map((y): [number, number, number, number] => [x - 0.4, x + 0.4, y + 2.2, y + 3.6]));
+    const door: [number, number, number, number][] = s > 0 ? [[CHAMBER_DOOR.x0, CHAMBER_DOOR.x1, 0, CHAMBER_DOOR.height]] : [];
+    m.wall('stone', 'x', CHAMBER_BACK, OUT, 0, CHAMBER_TOP + 0.8, ...across(CHAMBER_IN, CHAMBER_OUT), [...door, ...lights]);
+    m.box('stone', CHAMBER_EAST, OUT, 0, CHAMBER_TOP + 0.8, ...across(OUT - 2, CHAMBER_IN));
     m.box('roof', CHAMBER_BACK, OUT - 3, CHAMBER_TOP, CHAMBER_TOP + 0.8, ...across(OUT - 2, CHAMBER_IN));
     m.box('stone', CHAMBER_BACK - 0.3, OUT + 0.3, CHAMBER_TOP + 0.8, CHAMBER_TOP + 1.3, ...across(CHAMBER_IN + 1.5, CHAMBER_OUT + 0.3));
 
@@ -99,15 +110,26 @@ function buildHouse() {
   m.box('stone', BACK_AT(2), oracleX, REST2, H, -HW, HW);
   m.box('carved', oracleX, oracleX + 0.05, 0, OH, -HW, HW);
   // west chambers and roof
-  m.box('stone', CHAMBER_BACK, CHAMBER_BACK + 3, 0, CHAMBER_TOP + 0.8, -CHAMBER_OUT, CHAMBER_OUT);
+  m.wall(
+    'stone',
+    'z',
+    -CHAMBER_OUT,
+    CHAMBER_OUT,
+    0,
+    CHAMBER_TOP + 0.8,
+    CHAMBER_BACK,
+    CHAMBER_WEST,
+    [-14, 0, 14].flatMap((z) => STOREY_Y.map((y): [number, number, number, number] => [z - 0.4, z + 0.4, y + 2.2, y + 3.6])),
+  );
+  chambers(m);
   m.box('roof', CHAMBER_BACK + 3, BACK_AT(2), CHAMBER_TOP, CHAMBER_TOP + 0.8, -(OUT - 2), OUT - 2);
   m.box('stone', CHAMBER_BACK - 0.3, CHAMBER_BACK + 1.5, CHAMBER_TOP + 0.8, CHAMBER_TOP + 1.3, -CHAMBER_OUT - 0.3, CHAMBER_OUT + 0.3);
 
   // east wall with the door of the temple; it rises on as the back of the tower
   const door: [number, number, number, number] = [-DOOR.half, DOOR.half, 0, DOOR.height];
-  m.wall('stone', 'z', -HW, HW, 0, TOWER, frontX, PORCH.backX, [door]);
-  m.wall('stone', 'z', -OUT, -HW, H, TOWER, frontX, PORCH.backX);
-  m.wall('stone', 'z', HW, OUT, H, TOWER, frontX, PORCH.backX);
+  m.wall('stone', 'z', -HW, HW, 0, H, frontX, PORCH.backX, [door]);
+  m.wall('stone', 'z', -OUT, -HW, TOWER, H, frontX, PORCH.backX);
+  m.wall('stone', 'z', HW, OUT, TOWER, H, frontX, PORCH.backX);
   m.wall('carved', 'z', -HW, HW, 0, H, frontX - 0.05, frontX, [door]);
   m.wall('gold', 'z', -HW, HW, 0, PORCH.opening, PORCH.backX, PORCH.backX + 0.05, [door]);
   // olive-wood posts overlaid with gold (1 Kgs 6:33; 2 Chr 3:7)
@@ -126,21 +148,84 @@ function buildHouse() {
   m.box('ceiling', oracleX, P0, OH, OH + 0.4, -HW, HW);
   m.box('ceiling', P1, frontX, H - 0.05, H, -HW, HW);
   m.box('roof', BACK_AT(2), frontX, H, H + 1, -(OUT - 2), OUT - 2);
-  m.box('stone', BACK_AT(2) - 0.4, frontX, H + 0.6, H + 1.4, -(OUT - 2) - 0.4, OUT - 2 + 0.4);
+  m.box('stone', BACK_AT(2) - 0.4, PORCH.backX + 0.4, H + 0.6, H + 1.4, -(OUT - 2) - 0.4, OUT - 2 + 0.4);
 
   // the porch: open front with the tower above, a gold ceiling, cornices
   m.box('stone', PORCH.frontX, PORCH.faceX, PORCH.opening, TOWER, -HW, HW);
   m.box('gold', PORCH.backX, PORCH.frontX, PORCH.opening, PORCH.opening + 0.5, -HW, HW);
   m.box('gold', PORCH.frontX, PORCH.faceX, PORCH.opening - 0.6, PORCH.opening, -HW, HW);
-  m.box('roof', frontX, PORCH.faceX, TOWER - 0.5, TOWER, -OUT, OUT);
-  m.box('stone', frontX - 0.6, PORCH.faceX + 0.6, TOWER - 3, TOWER - 1.8, -OUT - 0.6, OUT + 0.6);
-  m.box('stone', frontX - 0.9, PORCH.faceX + 0.9, TOWER, TOWER + 0.8, -OUT - 0.9, OUT + 0.9);
-  m.box('stone', frontX - 0.4, PORCH.faceX + 0.4, H, H + 0.8, -OUT - 0.4, OUT + 0.4);
+  m.box('roof', PORCH.backX, PORCH.faceX, TOWER - 0.5, TOWER, -OUT, OUT);
+  m.box('stone', PORCH.backX, PORCH.faceX + 0.6, TOWER - 3, TOWER - 1.8, -OUT - 0.6, OUT + 0.6);
+  m.box('stone', PORCH.backX, PORCH.faceX + 0.9, TOWER, TOWER + 0.8, -OUT - 0.9, OUT + 0.9);
 
-  // door of the middle chamber, on the right (south) side (1 Kgs 6:8)
-  m.box('cedar', -21.5, -18.5, 0, 5.5, CHAMBER_OUT, CHAMBER_OUT + 0.12);
-  m.box('stone', -22.2, -17.8, 5.5, 6.3, CHAMBER_OUT, CHAMBER_OUT + 0.3);
+  // the door of the chambers, on the right (south) side (1 Kgs 6:8): a lintel, and a cedar leaf standing open
+  m.box('stone', CHAMBER_DOOR.x0 - 0.7, CHAMBER_DOOR.x1 + 0.7, CHAMBER_DOOR.height, CHAMBER_DOOR.height + 0.8, CHAMBER_OUT, CHAMBER_OUT + 0.3);
+  m.box('cedar', CHAMBER_DOOR.x0 - 0.15, CHAMBER_DOOR.x0, 0, CHAMBER_DOOR.height - 0.05, CHAMBER_IN - 2.9, CHAMBER_IN);
   return m.build();
+}
+
+/** Narrow windows lighting each room of the chambers. */
+const CHAMBER_WINDOWS = [-57, -41, -27, -11, 1, 9];
+
+/** Inside the side chambers: floors and ceilings, cross walls with doorways, and the stairs (1 Kgs 6:5-10). */
+function chambers(m: Mason) {
+  const T = 0.4; // cross walls
+  for (let s = 0; s < 3; s++) {
+    const y0 = STOREY_Y[s];
+    const y1 = s < 2 ? STOREY_Y[s + 1] - 1 : CHAMBER_TOP;
+    const fz = houseFaceZ(s);
+    const fx = houseFaceX(s);
+    // the floor of this storey (the ground storey stands on the platform), with stairwells cut out
+    if (s > 0) {
+      const wells = STAIRS.filter((st) => st.from + 1 === s);
+      for (const side of [1, -1]) {
+        const well = wells.find((st) => st.side === side);
+        const zs = (a: number, b: number): [number, number] => (side > 0 ? [a, b] : [-b, -a]);
+        if (well) {
+          m.box('cedar', CHAMBER_WEST, well.x0, y0 - 1, y0, ...zs(fz, CHAMBER_IN));
+          m.box('cedar', well.x1, CHAMBER_EAST, y0 - 1, y0, ...zs(fz, CHAMBER_IN));
+          m.box('cedar', well.x0, well.x1, y0 - 1, y0, ...zs(fz, well.zIn));
+        } else m.box('cedar', CHAMBER_WEST, CHAMBER_EAST, y0 - 1, y0, ...zs(fz, CHAMBER_IN));
+      }
+      m.box('cedar', CHAMBER_WEST, fx, y0 - 1, y0, -fz, fz);
+    }
+    // cross walls with a doorway in each
+    const dh = Math.min(3.8, y1 - y0 - 0.4);
+    for (const x of CROSS_X) {
+      for (const side of [1, -1]) {
+        const a = side > 0 ? fz : -CHAMBER_IN;
+        const b = side > 0 ? CHAMBER_IN : -fz;
+        const mid = (a + b) / 2;
+        m.wall('stone', 'z', a, b, y0, y1, x - T / 2, x + T / 2, [[mid - 1, mid + 1, y0, y0 + dh]]);
+      }
+    }
+    for (const z of CROSS_Z) {
+      const mid = (CHAMBER_WEST + fx) / 2;
+      m.wall('stone', 'x', CHAMBER_WEST, fx, y0, y1, z - T / 2, z + T / 2, [[mid - 1, mid + 1, y0, y0 + dh]]);
+    }
+  }
+  // the flights: solid steps up against the outer wall, with a rail on the open side
+  for (const st of STAIRS) {
+    const n = 12;
+    const rise = (STOREY_Y[st.from + 1] - STOREY_Y[st.from]) / n;
+    const run = (st.x1 - st.x0) / n;
+    const zs = (a: number, b: number): [number, number] => (st.side > 0 ? [a, b] : [-b, -a]);
+    for (let i = 0; i < n; i++) {
+      m.box('stone', st.x0 + i * run, st.x1, STOREY_Y[st.from] + i * rise, STOREY_Y[st.from] + (i + 1) * rise, ...zs(st.zIn, st.zOut));
+    }
+    // a cedar rail
+    for (let i = 0; i <= 4; i++) {
+      const x = st.x0 + 2 + ((st.x1 - st.x0 - 2) * i) / 4;
+      const y = STOREY_Y[st.from] + ((x - st.x0) / (st.x1 - st.x0)) * 6;
+      m.box('cedar', x - 0.1, x + 0.1, y, y + 2, ...zs(st.zIn - 0.1, st.zIn + 0.1));
+    }
+    for (let i = 0; i < 6; i++) {
+      const xa = st.x0 + 2 + ((st.x1 - st.x0 - 2) * i) / 6;
+      const xb = st.x0 + 2 + ((st.x1 - st.x0 - 2) * (i + 1)) / 6;
+      const y = STOREY_Y[st.from] + (((xa + xb) / 2 - st.x0) / (st.x1 - st.x0)) * 6 + 1.9;
+      m.box('cedar', xa, xb, y, y + 0.15, ...zs(st.zIn - 0.08, st.zIn + 0.08));
+    }
+  }
 }
 
 /** West face of the house wall at storey 0, 1, 2. */

@@ -26,14 +26,57 @@ export const CHAMBER_OUT = CHAMBER_IN + HOUSE.chamberWall; // 24
 export const CHAMBER_BACK = BACK - 5 - HOUSE.chamberWall; // -64
 export const CHAMBER_TOP = 3 * HOUSE.storey + 2; // three storeys and their floors
 
-/** The porch: 20 long (the breadth of the house), 10 deep, 120 high (1 Kgs 6:3; 2 Chr 3:4). */
+/**
+ * The porch: 20 long (the breadth of the house), 10 deep (1 Kgs 6:3). The Hebrew of 2 Chr 3:4 gives
+ * its height as 120; some Greek and Syriac copies read 20, followed here.
+ */
 export const PORCH = {
   backX: HOUSE.frontX + HOUSE.wall, // 16
   frontX: HOUSE.frontX + HOUSE.wall + 10, // 26: 10 cubits deep inside
   faceX: HOUSE.frontX + HOUSE.wall + 16, // 32: east face of the side walls
-  height: 120,
-  opening: 32, // height of the open front; not given
+  height: 20,
+  opening: 15, // height of the open front; not given
 };
+
+/**
+ * The house stands on a raised platform reached by steps. Not described for Solomon's house;
+ * Ezekiel's temple has "a full reed of six great cubits" of foundation (Ezek 41:8), a free space of
+ * 5 cubits round the chambers (Ezek 41:9-11), and steps up to the porch (Ezek 40:49).
+ */
+export const PLAT = {
+  h: 6,
+  minX: CHAMBER_BACK - 5, // -69
+  maxX: PORCH.faceX + 7, // 39: a landing before the porch, where the pillars stand
+  halfZ: CHAMBER_OUT + 5, // 29
+  parapet: 1,
+};
+/** Ten steps up the east face (Ezek 40:49, Greek), as wide as the porch. */
+export const STEPS = { n: 10, run: 10, halfZ: HOUSE.halfWidth };
+
+/** Height of each storey's floor in the side chambers, above the platform: rests at 6 and 12 (1 Kgs 6:6, 10). */
+export const STOREY_Y = [0, 6, 12];
+/** The house wall's face toward the chambers at each storey, stepping in a cubit (1 Kgs 6:6). */
+export const houseFaceZ = (s: number) => OUT - s * HOUSE.rest;
+export const houseFaceX = (s: number) => BACK + s * HOUSE.rest;
+/** The chambers' inner face of the outer wall: south/north at ±CHAMBER_IN, west at CHAMBER_BACK + wall. */
+export const CHAMBER_WEST = CHAMBER_BACK + HOUSE.chamberWall; // -61
+/** East end walls of the chambers (they stop beside the porch). */
+export const CHAMBER_EAST = OUT - 3; // 13
+
+/**
+ * "They went up with winding stairs into the middle chamber, and out of the middle into the third"
+ * (1 Kgs 6:8). Shown as two straight flights against the outer wall, rising eastward: on the south
+ * from the ground storey to the middle, on the north from the middle to the third.
+ */
+export const STAIRS = [
+  { from: 0, x0: -17, x1: -5, side: 1 },
+  { from: 1, x0: -17, x1: -5, side: -1 },
+].map((s) => ({ ...s, zIn: CHAMBER_IN - 2.5, zOut: CHAMBER_IN }));
+/** Cross walls dividing each storey into rooms, with a doorway in each (Ezek 41:6 has 30 a storey). */
+export const CROSS_X = [-49, -33, 3];
+export const CROSS_Z = [-6, 6];
+/** The door "in the right side of the house" (1 Kgs 6:8). */
+export const CHAMBER_DOOR = { x0: -21.5, x1: -18.5, height: 4.5 };
 
 /** Doorways. Width = the fraction of the 20-cubit wall given in 1 Kgs 6:31, 33 (KJV). Heights are not given. */
 export const DOOR = { half: 2.5, height: 10 }; // "a fourth part of the wall"
@@ -41,8 +84,8 @@ export const ORACLE_DOOR = { half: 2, height: 8 }; // "a fifth part of the wall"
 
 /** Jachin and Boaz: 18 cubits high, 12 round (1 Kgs 7:15), standing in the porch. */
 export const PILLAR = {
-  x: 29,
-  z: 6,
+  x: PORCH.faceX + 3.5, // before the porch, either side of the way in (1 Kgs 7:21)
+  z: 6.5,
   height: 18,
   radius: 12 / (2 * Math.PI),
   chapiter: 5, // 1 Kgs 7:16
@@ -55,7 +98,7 @@ export const POS = {
   lampX: [-21, -14.5, -8, -1.5, 5],
   lampZ: 8, // five on the right (south), five on the left (1 Kgs 7:49)
   tableZ: 4.5, // ten tables, five on each side (2 Chr 4:8)
-  altar: [62, 0] as const, // before the house (2 Chr 5:12; 1 Kgs 8:64)
+  altar: [74, 0] as const, // before the house (2 Chr 5:12; 1 Kgs 8:64)
   sea: [38, 36] as const, // right side of the house, eastward, toward the south (1 Kgs 7:39)
   basesX: [-50, -36, -22, -8, 6],
   basesZ: 34, // five on the right side of the house, five on the left (1 Kgs 7:39)
@@ -63,7 +106,7 @@ export const POS = {
 
 export const ALTAR = { size: 20, height: 10 }; // 2 Chr 4:1
 /** Ramp up the south side of the altar (not in Scripture; steps were forbidden, Ex 20:26). */
-export const RAMP = { minX: 58, maxX: 66, length: 32 };
+export const RAMP = { minX: 70, maxX: 78, length: 32 };
 export const SEA = { radius: 5, height: 5, oxHeight: 2.6 }; // 1 Kgs 7:23-25
 
 /** Courts: no measurements are given; shown at twice the tabernacle court, inside a great court. */
@@ -73,6 +116,8 @@ export const GREAT = { minX: -150, maxX: 230, minZ: -110, maxZ: 110, gate: 10, w
 export const START = { x: 168, z: 5, yaw: Math.PI / 2 + 0.03 };
 
 export function regionOf(x: number, z: number): string {
+  const az = Math.abs(z);
+  if (x > CHAMBER_WEST && x < CHAMBER_EAST && az < CHAMBER_IN && (az > OUT - 2 || x < BACK + 2)) return 'chambers';
   if (Math.abs(z) < HOUSE.halfWidth) {
     if (x > HOUSE.oracleX && x < HOUSE.partitionX - HOUSE.partition / 2) return 'oracle';
     if (x >= HOUSE.partitionX - HOUSE.partition / 2 && x < HOUSE.frontX + HOUSE.wall / 2) return 'holy';
@@ -86,6 +131,7 @@ export const REGION_LABEL: Record<string, string> = {
   great: 'The Great Court',
   inner: 'The Inner Court',
   porch: 'The Porch',
+  chambers: 'The Side Chambers',
   holy: 'The Holy Place',
   oracle: 'The Most Holy Place',
 };

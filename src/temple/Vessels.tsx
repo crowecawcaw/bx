@@ -40,18 +40,22 @@ export function BrassAltar() {
       c.scale.y = 1 + Math.sin(t * 5 + i * 1.7) * 0.25;
     });
   });
-  const ramp = useMemo(() => {
-    // a wedge from the hearth's edge down to the pavement, on the south side
+  const [ramp, kerbs] = useMemo(() => {
+    // a wedge from the hearth's edge down to the pavement, on the south side, with a low kerb each side
     const top = H - 0.4;
-    const g = new THREE.BoxGeometry(RAMP.maxX - RAMP.minX, top, RAMP.length);
-    g.translate((RAMP.minX + RAMP.maxX) / 2, top / 2, S / 2 + RAMP.length / 2);
-    const p = g.attributes.position as THREE.BufferAttribute;
-    for (let i = 0; i < p.count; i++) {
-      if (p.getY(i) > 0.01) p.setY(i, Math.max(0.02, top * (1 - (p.getZ(i) - S / 2) / RAMP.length)));
-    }
-    g.computeVertexNormals();
-    worldUV(g, [8, 3]);
-    return g;
+    const wedge = (x0: number, x1: number, extra: number) => {
+      const g = new THREE.BoxGeometry(x1 - x0, top, RAMP.length);
+      g.translate((x0 + x1) / 2, top / 2, S / 2 + RAMP.length / 2);
+      const p = g.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < p.count; i++) {
+        if (p.getY(i) > 0.01) p.setY(i, Math.max(0.02, top * (1 - (p.getZ(i) - S / 2) / RAMP.length)) + extra);
+      }
+      g.computeVertexNormals();
+      worldUV(g, [8, 3]);
+      return g;
+    };
+    const k = [wedge(RAMP.minX - 0.4, RAMP.minX, 0.7), wedge(RAMP.maxX, RAMP.maxX + 0.4, 0.7)];
+    return [wedge(RAMP.minX, RAMP.maxX, 0), mergeGeometries(k)!];
   }, [H, S]);
   const horns: [number, number][] = [
     [1, 1],
@@ -103,6 +107,7 @@ export function BrassAltar() {
         <Smoke y={H + 1.5} spread={3.2} count={14} color="#8a8178" scale={5} />
       </group>
       <mesh geometry={ramp} material={templeMaterials().stone} castShadow receiveShadow />
+      <mesh geometry={kerbs} material={templeMaterials().stone} castShadow receiveShadow />
     </group>
   );
 }

@@ -11,6 +11,7 @@ import { World } from './Environment';
 import { Ark, BronzeAltar, IncenseAltar, Laver, Menorah, Table } from './Furniture';
 import { lookAt, player, Player, walkTo } from './Player';
 import { DEBUG } from './dims';
+import { levelFor } from './nav';
 import { Post } from './Post';
 import { Tent } from './Tent';
 
@@ -42,7 +43,7 @@ function onTap(e: ThreeEvent<MouseEvent>) {
       return;
     }
   }
-  walkTo(p.x, p.z);
+  walkTo(p.x, p.z, levelFor(p.x, p.y, p.z, player.level));
 }
 
 function Bubbles() {

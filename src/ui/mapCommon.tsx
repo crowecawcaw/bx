@@ -1,5 +1,6 @@
 import { useEffect, useRef, type MouseEvent } from 'react';
 import { player, walkTo } from '../scene/Player';
+import { walkable } from '../scene/nav';
 
 /** Keeps an SVG group on the player's position and heading, without React re-renders. */
 export function usePlayerDot() {
@@ -26,5 +27,6 @@ export function tapToWalk(e: MouseEvent<SVGSVGElement>) {
   pt.x = e.clientX;
   pt.y = e.clientY;
   const p = pt.matrixTransform(svg.getScreenCTM()!.inverse());
-  walkTo(p.x, p.y);
+  // stay on this storey if the spot is on it; otherwise go down to the ground
+  walkTo(p.x, p.y, walkable(p.x, p.y, player.level) ? player.level : 0);
 }
