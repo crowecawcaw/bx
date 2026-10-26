@@ -3,9 +3,8 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { lathe } from '../scene/Furniture';
 import { toon } from '../scene/materials';
-import { hammeredTexture } from '../scene/textures';
 import { PILLAR } from './dims';
-import { checkerNetTexture } from './textures';
+import { brassBump, brassTexture, checkerNetTexture } from './textures';
 
 const R = PILLAR.radius; // 12 cubits round (1 Kgs 7:15)
 const TOP = PILLAR.height; // 18 cubits
@@ -14,7 +13,7 @@ const CAP_TOP = TOP + PILLAR.chapiter; // 5-cubit chapiter (1 Kgs 7:16)
 
 export function brightBronze() {
   // "of bright brass" (1 Kgs 7:45)
-  return toon('brightBronze', { color: '#d08a46', emissive: '#2c1300', emissiveIntensity: 0.35, map: hammeredTexture() });
+  return toon('brightBronze', { color: '#ffffff', emissive: '#2c1300', emissiveIntensity: 0.35, map: brassTexture(), bumpMap: brassBump(), bumpScale: 0.6 });
 }
 
 /** Radius of the chapiter profile at height y (the bowl swells, then the lily opens). */

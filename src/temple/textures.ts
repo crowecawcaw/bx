@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { drawCherub } from '../scene/cherubArt';
-import { make, noise, rng } from '../scene/textures';
+import { addNoise, bumpOf, FACET_MASK, FACET_SHIFT, fbm, grain, hammerFacets, make, makeBumped, noise, pits, putRGB, rng, smooth } from '../scene/textures';
 
 // Gold relief palette: carved cedar and cypress overlaid with gold (1 Kgs 6:18, 29, 32, 35).
 const G_BASE = '#d6a43a';
@@ -9,30 +9,131 @@ const G_MID = '#e7bb52';
 const G_DEEP = '#a8741e';
 const G_LINE = '#5a3608';
 
+/** Scale of the canvas being drawn on, relative to the size the motifs were laid out at.
+ *  Shadow offsets ignore the canvas transform, so relief() multiplies by it. */
+let RS = 1;
+
 /** Raised relief: everything drawn inside gets a soft shadow down and to the right. */
 function relief(ctx: CanvasRenderingContext2D, f: () => void, k = 1) {
   ctx.save();
   ctx.shadowColor = 'rgba(70,38,0,0.65)';
-  ctx.shadowOffsetX = 2.5 * k;
-  ctx.shadowOffsetY = 3.5 * k;
-  ctx.shadowBlur = 3 * k;
+  ctx.shadowOffsetX = 2.5 * k * RS;
+  ctx.shadowOffsetY = 3.5 * k * RS;
+  ctx.shadowBlur = 3 * k * RS;
   f();
   ctx.restore();
 }
 
-function hammer(ctx: CanvasRenderingContext2D, w: number, h: number, seed: number) {
-  const r = rng(seed);
-  for (let i = 0; i < (w * h) / 700; i++) {
-    const x = r() * w;
-    const y = r() * h;
-    const rad = 3 + r() * 8;
-    const g = ctx.createRadialGradient(x, y, 0, x, y, rad);
-    g.addColorStop(0, `rgba(255,240,190,${0.05 + r() * 0.06})`);
-    g.addColorStop(1, 'rgba(120,70,0,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
-  }
+/** Draws a motif layout made for a lw × lh canvas onto the full-size one. */
+function scaled(ctx: CanvasRenderingContext2D, W: number, lw: number, lh: number, f: (w: number, h: number) => void) {
+  ctx.save();
+  RS = W / lw;
+  ctx.scale(RS, RS);
+  f(lw, lh);
+  ctx.restore();
+  RS = 1;
 }
+
+/** Noise lattice counts for a w × h texture, so features are about `px` pixels across. */
+const lat = (n: number) => Math.max(1, Math.round(n));
+
+/**
+ * Gold leaf, beaten and burnished, over whatever has been drawn: small hammer facets, fine burnish
+ * streaks along x, broad warm tonal drift and a little grain. Brighter areas go paler, darker ones
+ * deeper and more orange, as real gold does. Returns heights for a bump map, taken from the drawing
+ * (outlines and relief shadows sink, raised highlights rise) plus the facets.
+ */
+function goldFinish(ctx: CanvasRenderingContext2D, w: number, h: number, seed: number, o: { relief?: number; streak?: number } = {}) {
+  const rel = o.relief ?? 0.55;
+  const sk = o.streak ?? 1;
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const broad = fbm(w, h, lat(w / 340), lat(h / 340), 5, seed, 0.55, 2);
+  const burn = fbm(w, h, lat(w / 512), lat(h / 6), 3, seed + 1, 0.6);
+  addNoise(burn, w, h, lat(w / 160), lat(h / 2.5), 0.45, seed + 2);
+  const F = hammerFacets();
+  const gr = grain(w, h, seed + 4);
+  const height = new Float32Array(w * h);
+  for (let y = 0, i = 0, p = 0; y < h; y++) {
+    const row = (y & FACET_MASK) << FACET_SHIFT;
+    for (let x = 0; x < w; x++, i++, p += 4) {
+      const lum = (0.3 * d[p] + 0.59 * d[p + 1] + 0.11 * d[p + 2]) / 255;
+      const f = F[row | (x & FACET_MASK)];
+      const e = 0.085 * broad[i] + 0.04 * sk * burn[i] + 0.05 * f + 0.018 * gr[i];
+      // ≈ m, m^1.18 and m^1.6 for m = 1 + e
+      d[p] = d[p] * (1 + e);
+      d[p + 1] = d[p + 1] * (1 + 1.18 * e);
+      d[p + 2] = d[p + 2] * (1 + 1.6 * e);
+      height[i] = 0.5 + rel * (lum - 0.62) + 0.06 * f + 0.015 * sk * burn[i];
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return height;
+}
+
+/** Heights from the luminance of what's on the canvas (0..1), for drawn reliefs. */
+function lumHeight(ctx: CanvasRenderingContext2D, w: number, h: number, k = 1, base = 0.5) {
+  const d = ctx.getImageData(0, 0, w, h).data;
+  const height = new Float32Array(w * h);
+  for (let i = 0, p = 0; i < w * h; i++, p += 4) height[i] = base + k * ((0.3 * d[p] + 0.59 * d[p + 1] + 0.11 * d[p + 2]) / 255 - 0.5);
+  return height;
+}
+
+/**
+ * Cast and polished brass ("bright brass", 1 Kgs 7:45) as colour and height fields: fine burnish
+ * streaks along x (round a turned pillar), tonal mottling at several scales, faint casting pores and
+ * a darker patina gathering in places. No big round marks.
+ */
+function brassFields(w: number, h: number, seed: number) {
+  const n = w * h;
+  const broad = fbm(w, h, lat(w / 256), lat(h / 256), 5, seed, 0.55, 2);
+  const mid = fbm(w, h, lat(w / 90), lat(h / 90), 3, seed + 1, 0.5, 2);
+  const streak = fbm(w, h, lat(w / 340), lat(h / 6.5), 3, seed + 2, 0.6);
+  addNoise(streak, w, h, lat(w / 128), lat(h / 1.6), 0.4, seed + 3);
+  const gr = grain(w, h, seed + 4);
+  const pit = pits(new Float32Array(n), w, h, Math.round(n / 1600), 0.7, 2.4, seed + 5);
+  // a few larger, shallower shrinkage pores
+  pits(pit, w, h, Math.round(n / 9000), 2, 4.5, seed + 6, 0.45);
+  const R = new Float32Array(n);
+  const G = new Float32Array(n);
+  const B = new Float32Array(n);
+  const H = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = Math.min(1, Math.max(0, 0.52 + 0.24 * broad[i] + 0.09 * streak[i] + 0.06 * mid[i] + 0.03 * gr[i]));
+    // dark burnt bronze to pale polished brass
+    let r = 150 + 96 * t;
+    let g = 86 + 98 * t;
+    let b = 36 + 66 * t;
+    // patina: a dull dark brown, gathering softly where the mid and broad noise agree
+    const pw = 0.38 * smooth(0.05, 1.05, 0.65 * mid[i] + 0.45 * broad[i]);
+    r += (116 - r) * pw;
+    g += (78 - g) * pw;
+    b += (44 - b) * pw;
+    const k = 1 - 0.42 * pit[i];
+    R[i] = r * k;
+    G[i] = g * k;
+    B[i] = b * k;
+    H[i] = 0.62 + 0.04 * broad[i] + 0.05 * streak[i] + 0.012 * gr[i] - 0.03 * pw - 0.45 * pit[i];
+  }
+  return { R, G, B, H };
+}
+
+/** The bright brass of Jachin and Boaz, the altar, the sea and the bases. */
+export function brassTexture() {
+  return makeBumped(
+    't-brass',
+    1024,
+    1024,
+    (ctx, w, h) => {
+      const f = brassFields(w, h, 401);
+      putRGB(ctx, w, h, f.R, f.G, f.B);
+      return f.H;
+    },
+    [3, 3],
+    1,
+  );
+}
+export const brassBump = () => (brassTexture(), bumpOf('t-brass'));
 
 /** An open flower: an eight-petalled rosette with a precious stone at its heart (2 Chr 3:6). */
 function rosette(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, gem: string) {
@@ -181,154 +282,318 @@ const GEMS = ['#b3123a', '#1f5fb8', '#1e8a5a', '#7a2aa0', '#d06a10'];
  * The walls of the house: cedar carved with cherubim, palm trees and open flowers, and bands of
  * gourds, all overlaid with gold and set with stones (1 Kgs 6:18, 29; 2 Chr 3:5-7).
  * One tile is 5 cubits wide by 10 high: a palm between cherubim, like Ezekiel's temple (Ezek 41:18).
+ * Laid out at 512 × 1024 and drawn half as large again.
  */
 export function carvedGoldTexture() {
-  return make('t-carved', 512, 1024, (ctx, w, h) => {
+  return makeBumped('t-carved', 768, 1536, (ctx, W, H) => {
     ctx.fillStyle = G_BASE;
-    ctx.fillRect(0, 0, w, h);
-    hammer(ctx, w, h, 301);
-    const c = h / 10; // pixels per cubit
-    // recessed main panel
-    ctx.fillStyle = 'rgba(120,70,0,0.18)';
-    ctx.fillRect(0, c * 1.9, w, c * 6.3);
-    ctx.fillStyle = G_DEEP;
-    ctx.fillRect(0, c * 1.9, w, 4);
-    ctx.fillRect(0, c * 8.2 - 4, w, 4);
-    // open flowers at top and bottom, gems at their hearts
-    for (let i = 0; i < 5; i++) {
-      rosette(ctx, (i + 0.5) * (w / 5), c * 0.5, c * 0.4, GEMS[i % GEMS.length]);
-      rosette(ctx, (i + 0.5) * (w / 5), c * 9.5, c * 0.4, GEMS[(i + 2) % GEMS.length]);
-    }
-    gourdBand(ctx, w, c * 1.05, c * 0.6, 10);
-    gourdBand(ctx, w, c * 8.35, c * 0.6, 10);
-    // chains hung below the upper band
-    chain(ctx, 0, w / 2, c * 1.95, c * 0.35);
-    chain(ctx, w / 2, w, c * 1.95, c * 0.35);
-    // palm tree between two cherubim (drawn at both edges so the tile repeats)
-    palm(ctx, w / 2, c * 8.1, c * 3.2, c * 0.95);
-    for (const x of [0, w]) {
-      relief(ctx, () => drawCherub(ctx, x, c * 5.3, c * 2.5, G_HI, G_MID, G_LINE, G_DEEP, G_HI), 1.2);
-    }
-  }, undefined);
-}
-
-/** Plain gold leaf over wood: the porch, door frames and the backs of things. */
-export function plainGoldTexture() {
-  return make('t-plaingold', 256, 256, (ctx, w, h) => {
-    ctx.fillStyle = G_BASE;
-    ctx.fillRect(0, 0, w, h);
-    hammer(ctx, w, h, 311);
-    noise(ctx, w, h, 400, '120,70,0', 0.08, 312, 2);
+    ctx.fillRect(0, 0, W, H);
+    scaled(ctx, W, 512, 1024, (w, h) => {
+      const c = h / 10; // layout units per cubit
+      // recessed main panel
+      ctx.fillStyle = 'rgba(120,70,0,0.18)';
+      ctx.fillRect(0, c * 1.9, w, c * 6.3);
+      ctx.fillStyle = G_DEEP;
+      ctx.fillRect(0, c * 1.9, w, 4);
+      ctx.fillRect(0, c * 8.2 - 4, w, 4);
+      ctx.fillStyle = G_HI;
+      ctx.fillRect(0, c * 1.9 + 4, w, 1.5);
+      ctx.fillRect(0, c * 8.2, w, 1.5);
+      // open flowers at top and bottom, gems at their hearts
+      for (let i = 0; i < 5; i++) {
+        rosette(ctx, (i + 0.5) * (w / 5), c * 0.5, c * 0.4, GEMS[i % GEMS.length]);
+        rosette(ctx, (i + 0.5) * (w / 5), c * 9.5, c * 0.4, GEMS[(i + 2) % GEMS.length]);
+      }
+      gourdBand(ctx, w, c * 1.05, c * 0.6, 10);
+      gourdBand(ctx, w, c * 8.35, c * 0.6, 10);
+      // chains hung below the upper band
+      chain(ctx, 0, w / 2, c * 1.95, c * 0.35);
+      chain(ctx, w / 2, w, c * 1.95, c * 0.35);
+      // palm tree between two cherubim (drawn at both edges so the tile repeats)
+      palm(ctx, w / 2, c * 8.1, c * 3.2, c * 0.95);
+      for (const x of [0, w]) {
+        relief(ctx, () => drawCherub(ctx, x, c * 5.3, c * 2.5, G_HI, G_MID, G_LINE, G_DEEP, G_HI), 1.2);
+      }
+    });
+    return goldFinish(ctx, W, H, 301);
   });
 }
+export const carvedGoldBump = () => (carvedGoldTexture(), bumpOf('t-carved'));
 
-/** The floor: planks of fir (cypress) overlaid with gold (1 Kgs 6:15, 30). One tile = 4 cubits. */
+/** Plain gold over wood: the porch, door frames and the backs of things. Spans 9 cubits (3 tiles). */
+export function plainGoldTexture() {
+  return makeBumped('t-plaingold', 1024, 1024, (ctx, w, h) => {
+    ctx.fillStyle = G_BASE;
+    ctx.fillRect(0, 0, w, h);
+    return goldFinish(ctx, w, h, 311, { relief: 0.3 });
+  }, [1 / 3, 1 / 3]);
+}
+export const plainGoldBump = () => (plainGoldTexture(), bumpOf('t-plaingold'));
+
+/** The floor: planks of fir (cypress) overlaid with gold and fastened with gold nails
+ *  (1 Kgs 6:15, 30; 2 Chr 3:9). The texture spans 8 cubits (2 tiles); planks half a cubit wide. */
 export function goldFloorTexture() {
-  return make('t-goldfloor', 256, 256, (ctx, w, h) => {
+  return makeBumped('t-goldfloor', 1024, 1024, (ctx, w, h) => {
     ctx.fillStyle = '#cf9c34';
     ctx.fillRect(0, 0, w, h);
-    hammer(ctx, w, h, 321);
     const r = rng(322);
-    const ph = h / 8; // planks half a cubit wide
-    for (let j = 0; j < 8; j++) {
-      ctx.fillStyle = `rgba(${r() > 0.5 ? '255,230,160' : '110,60,0'},${0.05 + r() * 0.06})`;
-      ctx.fillRect(0, j * ph, w, ph);
-      ctx.fillStyle = 'rgba(80,45,0,0.55)';
-      ctx.fillRect(0, j * ph, w, 1.5);
-      const joint = r() * w;
-      ctx.fillRect(joint, j * ph, 1.5, ph);
-      // gold nail heads (2 Chr 3:9)
-      ctx.fillStyle = 'rgba(255,240,180,0.8)';
-      for (const x of [joint - 5, joint + 6]) {
-        ctx.beginPath();
-        ctx.arc(x, j * ph + ph / 2, 1.6, 0, Math.PI * 2);
-        ctx.fill();
+    const C = w / 8;
+    const ph = C / 2;
+    for (let j = 0; j < 16; j++) {
+      const y = j * ph;
+      ctx.fillStyle = `rgba(${r() > 0.5 ? '255,230,160' : '110,60,0'},${0.04 + r() * 0.07})`;
+      ctx.fillRect(0, y, w, ph);
+      // the long seam between planks, with a lit arris below it
+      ctx.fillStyle = 'rgba(80,45,0,0.6)';
+      ctx.fillRect(0, y, w, 2);
+      ctx.fillStyle = 'rgba(255,236,170,0.35)';
+      ctx.fillRect(0, y + 2, w, 1.5);
+      // butt joints, staggered, with a gold nail either side
+      let x = r() * w;
+      const end = x + w;
+      while (x < end - C * 2) {
+        for (const xx of [x % w, (x % w) - w]) {
+          ctx.fillStyle = 'rgba(80,45,0,0.6)';
+          ctx.fillRect(xx - 1, y, 2, ph);
+          ctx.fillStyle = 'rgba(255,236,170,0.3)';
+          ctx.fillRect(xx + 1, y, 1.5, ph);
+          for (const nx of [xx - 9, xx + 10]) {
+            for (const ny of [y + ph * 0.3, y + ph * 0.7]) {
+              const g = ctx.createRadialGradient(nx - 1, ny - 1, 0, nx, ny, 3.6);
+              g.addColorStop(0, '#fff3c4');
+              g.addColorStop(0.6, '#e9bb55');
+              g.addColorStop(1, 'rgba(90,50,0,0.8)');
+              ctx.fillStyle = g;
+              ctx.beginPath();
+              ctx.arc(nx, ny, 3.6, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+        x += C * (3 + Math.floor(r() * 4));
       }
     }
-  });
+    return goldFinish(ctx, w, h, 321, { streak: 1.6 });
+  }, [0.5, 0.5]);
 }
+export const goldFloorBump = () => (goldFloorTexture(), bumpOf('t-goldfloor'));
 
 /** The ceiling: fir boards and beams overlaid with gold (2 Chr 3:5, 7). One tile = 5 cubits. */
 export function ceilingTexture() {
-  return make('t-ceiling', 256, 256, (ctx, w, h) => {
+  return makeBumped('t-ceiling', 512, 512, (ctx, W, H) => {
     ctx.fillStyle = '#c99633';
-    ctx.fillRect(0, 0, w, h);
-    hammer(ctx, w, h, 331);
-    // beams across, coffers between
-    ctx.fillStyle = '#9a6a18';
-    ctx.fillRect(0, 0, w, 26);
-    ctx.fillStyle = G_HI;
-    ctx.fillRect(0, 26, w, 3);
-    ctx.fillStyle = 'rgba(90,50,0,0.4)';
-    ctx.fillRect(0, 0, w, 3);
-    for (let i = 0; i < 2; i++) {
-      const x0 = 14 + i * 120;
-      ctx.strokeStyle = G_DEEP;
-      ctx.lineWidth = 4;
-      ctx.strokeRect(x0, 46, 108, 196);
-      rosette(ctx, x0 + 54, 144, 30, GEMS[i * 2]);
-    }
+    ctx.fillRect(0, 0, W, H);
+    scaled(ctx, W, 256, 256, (w) => {
+      // beams across, coffers between
+      ctx.fillStyle = '#9a6a18';
+      ctx.fillRect(0, 0, w, 26);
+      ctx.fillStyle = G_HI;
+      ctx.fillRect(0, 26, w, 3);
+      ctx.fillStyle = 'rgba(90,50,0,0.4)';
+      ctx.fillRect(0, 0, w, 3);
+      for (let i = 0; i < 2; i++) {
+        const x0 = 14 + i * 120;
+        ctx.strokeStyle = G_DEEP;
+        ctx.lineWidth = 4;
+        ctx.strokeRect(x0, 46, 108, 196);
+        ctx.strokeStyle = 'rgba(255,236,170,0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x0 + 2.5, 48.5, 103, 191);
+        rosette(ctx, x0 + 54, 144, 30, GEMS[i * 2]);
+      }
+    });
+    return goldFinish(ctx, W, H, 331);
   });
 }
+export const ceilingBump = () => (ceilingTexture(), bumpOf('t-ceiling'));
 
-/** Hewn limestone ashlar ("costly stones, hewed", 1 Kgs 5:17; 7:9). One tile = 8 × 3 cubits (two courses). */
+/**
+ * Lays out courses of blocks on a w × h tile that wraps both ways: `rows` courses, each block a
+ * random choice of `lens` pixels long, each course starting at a random offset. Per pixel: the
+ * block's index, the distance in pixels to its nearest edge, and whether that edge is a vertical joint.
+ */
+function masonry(w: number, h: number, rows: number, lens: number[], seed: number) {
+  const r = rng(seed);
+  const id = new Int32Array(w * h);
+  const dist = new Float32Array(w * h);
+  const vert = new Uint8Array(w * h);
+  const ch = h / rows;
+  const minL = Math.min(...lens);
+  const bu = new Int32Array(w);
+  const b0 = new Int32Array(w);
+  const b1 = new Int32Array(w);
+  let n = 0;
+  for (let row = 0; row < rows; row++) {
+    const s = Math.floor(r() * w);
+    for (let u = 0; u < w; n++) {
+      let L = lens[Math.floor(r() * lens.length)];
+      if (u + L > w || w - (u + L) < minL * 0.75) L = w - u;
+      for (let k = u; k < u + L; k++) {
+        bu[k] = n;
+        b0[k] = u;
+        b1[k] = u + L;
+      }
+      u += L;
+    }
+    const y0 = Math.round(row * ch);
+    const y1 = Math.round((row + 1) * ch);
+    for (let y = y0; y < y1; y++) {
+      const dy = Math.min(y - y0 + 0.5, y1 - y - 0.5);
+      for (let x = 0; x < w; x++) {
+        const u = (x - s + w) % w;
+        const dx = Math.min(u - b0[u] + 0.5, b1[u] - u - 0.5);
+        const o = y * w + x;
+        id[o] = bu[u];
+        if (dx < dy) {
+          dist[o] = dx;
+          vert[o] = 1;
+        } else dist[o] = dy;
+      }
+    }
+  }
+  return { id, dist, vert, n };
+}
+
+/**
+ * Hewn limestone ashlar ("costly stones, hewed", 1 Kgs 5:17; 7:9). The wall tile is 8 × 3 cubits;
+ * this texture spans two tiles across (16 cubits, two courses) so the blocks repeat less often.
+ * Each block has a drafted margin tooled across its edge round a slightly proud, diagonally
+ * chiselled face, its own tone of warm limestone, and arrises worn and chipped.
+ */
 export function ashlarTexture() {
-  return make('t-ashlar', 512, 192, (ctx, w, h) => {
-    ctx.fillStyle = '#e2d2ae';
-    ctx.fillRect(0, 0, w, h);
-    const r = rng(341);
-    const course = h / 2;
-    for (let row = 0; row < 2; row++) {
-      let x = row ? -w / 6 : 0;
-      while (x < w) {
-        const bw = (w / 8) * (2 + Math.floor(r() * 3)) * 0.75;
-        const tone = 200 + r() * 30;
-        ctx.fillStyle = `rgb(${tone + 22},${tone + 8},${tone - 22})`;
-        ctx.fillRect(x + 2, row * course + 2, bw - 4, course - 4);
-        // drafted margin round each face
-        ctx.strokeStyle = 'rgba(255,248,228,0.55)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x + 7, row * course + 7, bw - 14, course - 14);
-        ctx.strokeStyle = 'rgba(120,96,60,0.35)';
-        ctx.strokeRect(x + 10, row * course + 10, bw - 20, course - 20);
-        x += bw;
+  return makeBumped('t-ashlar', 2048, 512, (ctx, w, h) => {
+    const C = w / 16; // pixels per cubit
+    const m = masonry(w, h, 2, [2, 2.5, 3, 3.5, 4, 5].map((l) => Math.round(l * C)), 341);
+    const r = rng(342);
+    const tone = new Float32Array(m.n);
+    const warm = new Float32Array(m.n);
+    const phase = new Float32Array(m.n);
+    const dir = new Float32Array(m.n);
+    for (let b = 0; b < m.n; b++) {
+      tone[b] = 0.9 + r() * 0.12;
+      warm[b] = r() - 0.5;
+      phase[b] = r() * 40;
+      dir[b] = r() < 0.5 ? 0.7 : -0.7;
+    }
+    const broad = fbm(w, h, 16, 4, 5, 343, 0.55, 2);
+    const mid = fbm(w, h, 64, 16, 3, 344, 0.5, 2);
+    const fine = grain(w, h, 345);
+    const tool = addNoise(new Float32Array(w * h), w, h, 40, 10, 1, 346);
+    const wear = fbm(w, h, 128, 32, 3, 347, 0.6, 2);
+    const pk = pits(new Float32Array(w * h), w, h, Math.round((w * h) / 1100), 0.7, 2.2, 348);
+    const M = 0.17 * C; // the drafted margin
+    const R = new Float32Array(w * h);
+    const G = new Float32Array(w * h);
+    const B = new Float32Array(w * h);
+    const height = new Float32Array(w * h);
+    const TAU = Math.PI * 2;
+    for (let y = 0, o = 0; y < h; y++) {
+      for (let x = 0; x < w; x++, o++) {
+        const b = m.id[o];
+        const d = m.dist[o];
+        const wearW = 1.5 + 7 * Math.max(0, wear[o] + 0.1);
+        const edge = smooth(1, 1 + wearW, d);
+        const face = smooth(M - 2, M + 3, d);
+        // margins are combed across the edge; the face is struck in diagonal batches
+        const stripe =
+          face < 0.5
+            ? Math.sin((m.vert[o] ? y : x) * (TAU / 5) + 2 * tool[o]) * 0.6
+            : Math.sin((x * dir[b] + y + phase[b]) * (TAU / 8) + 2.5 * tool[o]) * (0.25 + 0.75 * smooth(-0.3, 0.5, tool[o]));
+        // chipped arrises show fresher, paler stone with a thin shadowed lip at the joint
+        const k =
+          tone[b] * (1 + 0.04 * broad[o] + 0.02 * mid[o] + 0.025 * fine[o] + 0.022 * stripe + 0.03 * (1 - face) + 0.04 * (1 - edge)) * (0.9 + 0.1 * smooth(0, 2.5, d)) - 0.28 * pk[o];
+        const ochre = 0.35 * smooth(0.35, 0.9, broad[o] + 0.4 * mid[o]);
+        let rr = (228 + warm[b] * 10) * k;
+        let gg = 212 * k;
+        let bb = (178 - warm[b] * 14) * k;
+        rr += (212 - rr) * ochre * 0.4;
+        gg += (172 - gg) * ochre * 0.4;
+        bb += (118 - bb) * ochre * 0.4;
+        const joint = 1 - smooth(0.6, 2.2, d);
+        R[o] = rr + (140 - rr) * joint;
+        G[o] = gg + (122 - gg) * joint;
+        B[o] = bb + (96 - bb) * joint;
+        height[o] = 0.2 + 0.5 * edge + 0.07 * face + 0.03 * stripe + 0.025 * mid[o] - 0.3 * pk[o];
       }
     }
-    noise(ctx, w, h, 2400, '120,95,60', 0.12, 342, 2);
-    noise(ctx, w, h, 1200, '255,250,235', 0.12, 343, 2);
-    // mortar joints
-    ctx.fillStyle = 'rgba(110,88,58,0.6)';
-    ctx.fillRect(0, 0, w, 2);
-    ctx.fillRect(0, course - 1, w, 2);
-  }, undefined);
+    putRGB(ctx, w, h, R, G, B);
+    return height;
+  }, [0.5, 1]);
+}
+export const ashlarBump = () => (ashlarTexture(), bumpOf('t-ashlar'));
+
+let paveCache: { k: Float32Array; hue: Float32Array; height: Float32Array } | null = null;
+
+/** Brightness, hue shift and height of the courtyard paving, shared by every pavement colour. */
+function paveFields(w: number, h: number) {
+  if (paveCache) return paveCache;
+  const C = w / 12; // pixels per cubit: the texture spans 12 cubits (2 tiles)
+  const m = masonry(w, h, 8, [1.5, 2, 2.5, 3].map((l) => Math.round(l * C)), 351);
+  const r = rng(352);
+  const tone = new Float32Array(m.n);
+  const hueB = new Float32Array(m.n);
+  const dish = new Float32Array(m.n);
+  for (let b = 0; b < m.n; b++) {
+    tone[b] = 0.88 + r() * 0.16;
+    hueB[b] = (r() - 0.5) * 2;
+    dish[b] = r();
+  }
+  const broad = fbm(w, h, 6, 6, 5, 353, 0.55, 2);
+  const mid = fbm(w, h, 32, 32, 3, 354, 0.5, 2);
+  const fine = grain(w, h, 355);
+  const wear = fbm(w, h, 64, 64, 3, 356, 0.6, 2);
+  const pk = pits(new Float32Array(w * h), w, h, Math.round((w * h) / 1600), 0.8, 2.6, 357);
+  const k = new Float32Array(w * h);
+  const hue = new Float32Array(w * h);
+  const height = new Float32Array(w * h);
+  for (let o = 0; o < w * h; o++) {
+    const b = m.id[o];
+    const d = m.dist[o];
+    const wearW = 2 + 8 * Math.max(0, wear[o] + 0.2);
+    const edge = smooth(0.8, 0.8 + wearW, d);
+    // footworn: broad paler, smoother patches
+    const worn = smooth(0.1, 0.7, broad[o]);
+    const joint = 1 - smooth(0.6, 2.4, d);
+    k[o] = (tone[b] * (1 + 0.025 * mid[o] * (1 - 0.6 * worn) + 0.03 * fine[o] * (1 - 0.5 * worn) + 0.05 * worn) * (0.94 + 0.06 * edge) - 0.22 * pk[o]) * (1 - 0.45 * joint);
+    hue[o] = hueB[b] + 0.3 * mid[o];
+    height[o] = 0.2 + 0.5 * edge + 0.03 * mid[o] * (1 - worn) - 0.03 * dish[b] * smooth(0, 40, d) - 0.3 * pk[o];
+  }
+  return (paveCache = { k, hue, height });
 }
 
-/** Courtyard pavement (2 Chr 7:3). One tile = 6 cubits. */
+/** Courtyard pavement (2 Chr 7:3): stones of varied size and shade in courses, joints, wear.
+ *  The texture spans 12 cubits (two 6-cubit tiles). Each colour gets the same stones, shifted. */
 export function pavementTexture(key = 't-pave', base = '#d9c7a0') {
-  return make(key, 256, 256, (ctx, w, h) => {
-    ctx.fillStyle = base;
-    ctx.fillRect(0, 0, w, h);
-    const r = rng(key.length * 31 + 7);
-    const n = 4;
-    const s = w / n;
-    for (let j = 0; j < n; j++) {
-      for (let i = 0; i < n; i++) {
-        const off = j % 2 ? s / 2 : 0;
-        const t = (r() - 0.5) * 22;
-        ctx.fillStyle = `rgba(${t > 0 ? '255,248,230' : '110,85,50'},${Math.abs(t) / 90})`;
-        ctx.fillRect(i * s + off, j * s, s, s);
-        ctx.fillRect(i * s + off - w, j * s, s, s);
+  return makeBumped(key, 1024, 1024, (ctx, w, h) => {
+    const f = paveFields(w, h);
+    const hex = parseInt(base.slice(1), 16);
+    const [br, bg, bb] = [hex >> 16, (hex >> 8) & 255, hex & 255];
+    let s = 0;
+    for (const ch of key) s = (s * 31 + ch.charCodeAt(0)) >>> 0;
+    const ox = s % w;
+    const oy = Math.floor(s / w) % h;
+    const R = new Float32Array(w * h);
+    const G = new Float32Array(w * h);
+    const B = new Float32Array(w * h);
+    const height = new Float32Array(w * h);
+    for (let y = 0, o = 0; y < h; y++) {
+      const row = ((y + oy) % h) * w;
+      for (let x = 0; x < w; x++, o++) {
+        const i = row + ((x + ox) % w);
+        const k = f.k[i];
+        const hu = f.hue[i];
+        // some stones greyer, some warmer or pinker
+        R[o] = br * k * (1 + 0.045 * hu);
+        G[o] = bg * k * (1 + 0.01 * hu);
+        B[o] = bb * k * (1 - 0.06 * hu);
+        height[o] = f.height[i];
       }
     }
-    ctx.fillStyle = 'rgba(100,78,48,0.45)';
-    for (let j = 0; j < n; j++) {
-      ctx.fillRect(0, j * s, w, 2);
-      for (let i = 0; i <= n; i++) ctx.fillRect(i * s + (j % 2 ? s / 2 : 0), j * s, 2, s);
-    }
-    noise(ctx, w, h, 1500, '100,80,50', 0.12, 351, 2);
-    noise(ctx, w, h, 800, '255,250,235', 0.14, 352, 2);
-  }, undefined);
+    putRGB(ctx, w, h, R, G, B);
+    return height;
+  }, [0.5, 0.5]);
 }
+export const pavementBump = (key = 't-pave', base?: string) => (pavementTexture(key, base), bumpOf(key));
 
 /** Terra rossa and limestone hillside with scrub, for the ground beyond the courts. */
 export function hillGroundTexture() {
@@ -343,23 +608,46 @@ export function hillGroundTexture() {
   }, [90, 90]);
 }
 
-/** Cedar of Lebanon: the beam course on the court walls (1 Kgs 6:36) and the chambers' doors. */
+/**
+ * Cedar of Lebanon: the beam course on the court walls (1 Kgs 6:36) and the chambers' doors.
+ * Flat-sawn grain running along v: growth rings drawn as contours that nest into arches
+ * (the "cathedral" figure), soft earlywood, sharp dark latewood, fine pores and tonal drift.
+ * One tile = 2 × 6 cubits.
+ */
 export function cedarTexture() {
-  return make('t-cedar', 128, 512, (ctx, w, h) => {
-    ctx.fillStyle = '#8a4a2a';
-    ctx.fillRect(0, 0, w, h);
-    const r = rng(371);
-    for (let i = 0; i < 46; i++) {
-      ctx.strokeStyle = `rgba(${r() > 0.5 ? '50,22,10' : '190,120,80'},${0.15 + r() * 0.2})`;
-      ctx.lineWidth = 1 + r() * 3;
-      const x = r() * w;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      for (let y = 0; y <= h; y += 24) ctx.lineTo(x + Math.sin(y * 0.03 + i) * 4, y);
-      ctx.stroke();
+  return makeBumped('t-cedar', 256, 1024, (ctx, w, h) => {
+    const warp = fbm(w, h, 2, 4, 4, 371, 0.5);
+    const wig = fbm(w, h, 8, 24, 3, 375, 0.5);
+    const pores = fbm(w, h, 96, 6, 2, 372, 0.5);
+    const broad = fbm(w, h, 2, 6, 3, 373, 0.5);
+    const fine = grain(w, h, 374);
+    const R = new Float32Array(w * h);
+    const G = new Float32Array(w * h);
+    const B = new Float32Array(w * h);
+    const height = new Float32Array(w * h);
+    const TAU = Math.PI * 2;
+    for (let y = 0, o = 0; y < h; y++) {
+      for (let x = 0; x < w; x++, o++) {
+        const u = x / w;
+        const v = y / h;
+        // distance from the heart, folded so the tile wraps, bent into arches along the board
+        const across = Math.abs(u - 0.5) * 2;
+        const g = 10 * across + 0.8 * Math.sin(TAU * v + 0.6 * Math.sin(TAU * u)) + 0.35 * Math.sin(TAU * 2 * v + 1.3) + 1.6 * warp[o] + 0.35 * wig[o];
+        const ring = g - Math.floor(g);
+        const late = smooth(0.58, 0.8, ring) * (1 - smooth(0.9, 0.97, ring));
+        const t = Math.min(1, Math.max(0, 0.62 + 0.12 * broad[o] + 0.05 * pores[o] + 0.04 * fine[o] - 0.55 * late));
+        // latewood brown to pale reddish earlywood
+        R[o] = 104 + 92 * t;
+        G[o] = 50 + 66 * t;
+        B[o] = 30 + 44 * t;
+        height[o] = 0.5 + 0.12 * late + 0.04 * pores[o] + 0.01 * fine[o];
+      }
     }
-  }, undefined);
+    putRGB(ctx, w, h, R, G, B);
+    return height;
+  });
 }
+export const cedarBump = () => (cedarTexture(), bumpOf('t-cedar'));
 
 /** Cast bronze panel for the bases: cherubim, lions, oxen and palm trees (1 Kgs 7:29, 36). One tile = 4 × 2 cubits. */
 export function basePanelTexture() {
@@ -367,9 +655,8 @@ export function basePanelTexture() {
     const B = '#b9773a';
     const HI = '#e6a865';
     const LO = '#6d3e14';
-    ctx.fillStyle = B;
-    ctx.fillRect(0, 0, w, h);
-    noise(ctx, w, h, 900, '60,30,0', 0.12, 381, 2);
+    const f = brassFields(w, h, 381);
+    putRGB(ctx, w, h, f.R, f.G, f.B);
     // ledges framing the borders (1 Kgs 7:28)
     ctx.fillStyle = LO;
     ctx.fillRect(0, 0, w, 16);
@@ -492,29 +779,47 @@ export function checkerNetTexture() {
   }, [8, 1]);
 }
 
-/** Inner court gate leaves: wood overlaid with bronze plates and studs (2 Chr 4:9). */
+/** Inner court gate leaves: wood overlaid with brass plates and studs (2 Chr 4:9). Laid out at 256². */
 export function bronzeDoorTexture() {
-  return make('t-bronzedoor', 256, 256, (ctx, w, h) => {
-    ctx.fillStyle = '#a8662e';
-    ctx.fillRect(0, 0, w, h);
-    noise(ctx, w, h, 800, '60,30,0', 0.14, 391, 2);
-    ctx.strokeStyle = '#5a3210';
-    ctx.lineWidth = 6;
-    ctx.strokeRect(10, 10, w - 20, h - 20);
-    ctx.beginPath();
-    ctx.moveTo(10, h / 2);
-    ctx.lineTo(w - 10, h / 2);
-    ctx.stroke();
-    ctx.fillStyle = '#e2a66a';
-    for (let x = 24; x < w; x += 26) {
-      for (const y of [24, h / 2 - 14, h / 2 + 14, h - 24]) {
-        ctx.beginPath();
-        ctx.arc(x, y, 4, 0, Math.PI * 2);
-        ctx.fill();
-      }
+  return makeBumped('t-bronzedoor', 512, 512, (ctx, W, H) => {
+    const f = brassFields(W, H, 391);
+    for (let i = 0; i < f.R.length; i++) {
+      // a little darker and redder than the polished vessels
+      f.R[i] *= 0.88;
+      f.G[i] *= 0.8;
+      f.B[i] *= 0.74;
     }
-  }, undefined);
+    putRGB(ctx, W, H, f.R, f.G, f.B);
+    scaled(ctx, W, 256, 256, (w, h) => {
+      ctx.strokeStyle = '#5a3210';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(10, 10, w - 20, h - 20);
+      ctx.beginPath();
+      ctx.moveTo(10, h / 2);
+      ctx.lineTo(w - 10, h / 2);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(240,190,120,0.45)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(13.5, 13.5, w - 27, h - 27);
+      for (let x = 24; x < w; x += 26) {
+        for (const y of [24, h / 2 - 14, h / 2 + 14, h - 24]) {
+          const g = ctx.createRadialGradient(x - 1.3, y - 1.3, 0, x, y, 4.5);
+          g.addColorStop(0, '#ffe2a8');
+          g.addColorStop(0.55, '#d0924f');
+          g.addColorStop(1, '#4a2a0c');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    });
+    const height = lumHeight(ctx, W, H, 0.8);
+    for (let i = 0; i < height.length; i++) height[i] = 0.5 * height[i] + 0.5 * f.H[i];
+    return height;
+  });
 }
+export const bronzeDoorBump = () => (bronzeDoorTexture(), bumpOf('t-bronzedoor'));
 
 export function tex(t: THREE.Texture, wrap = true) {
   if (wrap) t.wrapS = t.wrapT = THREE.RepeatWrapping;

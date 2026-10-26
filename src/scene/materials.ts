@@ -25,12 +25,16 @@ export const windTime = { value: 0 };
  * surface curves (bevels, pillars, folds), so big flat walls don't glow at grazing angles.
  * Wind ripples cloth, more toward the hem (local y runs from 0 at the top edge downward).
  */
-function stylize(m: THREE.MeshToonMaterial, wind = 0) {
+function stylize(m: THREE.MeshToonMaterial, wind = 0, geomCurv = false) {
+  // With a bump map on a hard surface, the curvature test uses the unbumped normal, or every
+  // tooling mark and pore would count as a curve and flat walls would glow at grazing angles.
+  // (Cloth keeps the bumped normal: its weave catching the rim light is part of its look.)
+  const curvN = geomCurv ? 'nonPerturbedNormal' : 'normal';
   m.onBeforeCompile = (sh) => {
     sh.fragmentShader = sh.fragmentShader.replace(
       '#include <opaque_fragment>',
       `float rimV = 1.0 - clamp(abs(dot(normal, normalize(vViewPosition))), 0.0, 1.0);
-      float curv = clamp(length(fwidth(normal)) * 25.0, 0.0, 1.0);
+      float curv = clamp(length(fwidth(${curvN})) * 25.0, 0.0, 1.0);
       outgoingLight += diffuseColor.rgb * vec3(1.0, 0.93, 0.8) * 0.3 * smoothstep(0.55, 0.62, rimV) * curv;
       #include <opaque_fragment>`,
     );
@@ -51,14 +55,14 @@ function stylize(m: THREE.MeshToonMaterial, wind = 0) {
         );
     }
   };
-  m.customProgramCacheKey = () => `toon-style-${wind}`;
+  m.customProgramCacheKey = () => `toon-style-${wind}-${curvN}`;
   return m;
 }
 
 export function toon(key: string, params: THREE.MeshToonMaterialParameters, wind = 0) {
   let m = mats.get(key);
   if (!m) {
-    m = stylize(new THREE.MeshToonMaterial({ gradientMap: toonRamp(), ...params }), wind);
+    m = stylize(new THREE.MeshToonMaterial({ gradientMap: toonRamp(), ...params }), wind, !!params.bumpMap && !key.startsWith('cloth:'));
     mats.set(key, m);
   }
   return m;

@@ -27,11 +27,17 @@ import {
 } from './dims';
 import { Mason, worldUV } from './mason';
 import {
+  ashlarBump,
   ashlarTexture,
+  carvedGoldBump,
   carvedGoldTexture,
+  cedarBump,
   cedarTexture,
+  ceilingBump,
   ceilingTexture,
+  goldFloorBump,
   goldFloorTexture,
+  plainGoldBump,
   plainGoldTexture,
   tex,
 } from './textures';
@@ -62,13 +68,13 @@ export function templeMaterials() {
   if (mats) return mats;
   const goldish = { emissive: '#3c2600', emissiveIntensity: 0.4 };
   mats = {
-    stone: toon('t-stone', { map: tex(ashlarTexture()) }),
-    carved: toon('t-carved', { map: tex(carvedGoldTexture()), ...goldish }),
-    floor: toon('t-floor', { map: tex(goldFloorTexture()), ...goldish }),
-    ceiling: toon('t-ceiling', { map: tex(ceilingTexture()), ...goldish }),
-    gold: toon('t-gold', { map: tex(plainGoldTexture()), ...goldish }),
+    stone: toon('t-stone', { map: tex(ashlarTexture()), bumpMap: ashlarBump(), bumpScale: 0.8 }),
+    carved: toon('t-carved', { map: tex(carvedGoldTexture()), bumpMap: carvedGoldBump(), bumpScale: 0.6, ...goldish }),
+    floor: toon('t-floor', { map: tex(goldFloorTexture()), bumpMap: goldFloorBump(), bumpScale: 0.5, ...goldish }),
+    ceiling: toon('t-ceiling', { map: tex(ceilingTexture()), bumpMap: ceilingBump(), bumpScale: 0.6, ...goldish }),
+    gold: toon('t-gold', { map: tex(plainGoldTexture()), bumpMap: plainGoldBump(), bumpScale: 0.4, ...goldish }),
     roof: toon('t-roof', { color: '#cbb894' }),
-    cedar: toon('t-cedar', { map: tex(cedarTexture()) }),
+    cedar: toon('t-cedar', { map: tex(cedarTexture()), bumpMap: cedarBump(), bumpScale: 0.5 }),
   };
   return mats;
 }
