@@ -520,3 +520,30 @@ export function tex(t: THREE.Texture, wrap = true) {
   if (wrap) t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 }
+
+/** Rough-dressed limestone of the great retaining walls under the courts. One tile = 12 × 6 cubits. */
+export function terraceWallTexture() {
+  return make('t-terraceWall', 256, 128, (ctx, w, h) => {
+    ctx.fillStyle = '#cdbb95';
+    ctx.fillRect(0, 0, w, h);
+    const r = rng(371);
+    const rows = 4;
+    const ch = h / rows;
+    for (let row = 0; row < rows; row++) {
+      let x = row % 2 ? -w / 7 : 0;
+      while (x < w) {
+        const bw = (w / 6) * (0.8 + r() * 0.9);
+        const tone = 190 + r() * 35;
+        ctx.fillStyle = `rgb(${tone + 20},${tone + 6},${tone - 24})`;
+        ctx.fillRect(x + 2, row * ch + 2, bw - 3, ch - 3);
+        // drafted margin, rough boss
+        ctx.strokeStyle = 'rgba(250,240,215,0.45)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 5, row * ch + 5, bw - 9, ch - 9);
+        x += bw;
+      }
+    }
+    noise(ctx, w, h, 1600, '110,90,60', 0.16, 372, 2);
+    noise(ctx, w, h, 700, '255,248,230', 0.14, 373, 2);
+  }, undefined);
+}
