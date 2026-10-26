@@ -34,7 +34,7 @@ export const TENT = {
 
 export const POS = {
   ark: [-25, 0] as const, // Holy of Holies centre
-  incense: [-21.5, 0] as const, // "before the vail" (Ex 30:6; 40:26)
+  incense: [-18.5, 0] as const, // "before the vail" (Ex 30:6; 40:26)
   table: [-10, -3] as const, // north side (Ex 26:35; 40:22)
   menorah: [-10, 3] as const, // south side, over against the table (Ex 26:35; 40:24)
   laver: [12, 0] as const, // between the tent and the altar (Ex 30:18; 40:30)
@@ -61,3 +61,6 @@ export const REGION_LABEL: Record<Region, string> = {
   holy: 'The Holy Place',
   holiest: 'The Most Holy Place',
 };
+
+/** Debug hooks (window.__tabernacle, window.__gl) load only with ?debug in the URL. */
+export const DEBUG = new URLSearchParams(window.location.search).has('debug');

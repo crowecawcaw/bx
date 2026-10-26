@@ -2,7 +2,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useStore } from '../store';
-import { EYE_HEIGHT, regionOf, START } from './dims';
+import { DEBUG, EYE_HEIGHT, regionOf, START } from './dims';
 import { buildNav, findPath, walkable } from './nav';
 
 /** Mutable player state shared with the HUD (mini-map) without React re-renders. */
@@ -13,22 +13,23 @@ export const player = {
   pitch: -0.04,
   path: [] as [number, number][],
   lastLook: 0,
+  walkStart: 0,
   target: null as [number, number] | null,
 };
 
-// Handy for debugging and automated screenshots.
 const SPEED = 5.5; // cubits per second (≈ 2.5 m/s)
 
 export function walkTo(x: number, z: number) {
   const p = findPath(player.x, player.z, x, z);
   if (!p) return false;
   player.path = p;
+  player.walkStart = performance.now();
   player.target = p[p.length - 1];
   return true;
 }
 
 // Handy for debugging and automated screenshots.
-(window as unknown as Record<string, unknown>).__tabernacle = { player, useStore, walkTo };
+if (DEBUG) (window as unknown as Record<string, unknown>).__tabernacle = { player, useStore, walkTo };
 
 /** Turn the camera to face a point. */
 export function lookAt(x: number, z: number) {
@@ -58,31 +59,34 @@ export function Player() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navVersion]);
 
-  // drag to look (mouse or one finger)
+  // Drag to look (mouse or one finger). The view follows the finger 1:1, like grabbing the scene.
   useEffect(() => {
     const el = gl.domElement;
     let active: number | null = null;
-    let lx = 0;
-    let ly = 0;
-    let moved = 0;
+    let sx = 0;
+    let sy = 0;
+    let yaw0 = 0;
+    let pitch0 = 0;
+    let dragging = false;
     const down = (e: PointerEvent) => {
       if (active !== null) return;
       active = e.pointerId;
-      lx = e.clientX;
-      ly = e.clientY;
-      moved = 0;
+      sx = e.clientX;
+      sy = e.clientY;
+      yaw0 = player.yaw;
+      pitch0 = player.pitch;
+      dragging = false;
     };
     const move = (e: PointerEvent) => {
       if (e.pointerId !== active) return;
-      const dx = e.clientX - lx;
-      const dy = e.clientY - ly;
-      lx = e.clientX;
-      ly = e.clientY;
-      moved += Math.abs(dx) + Math.abs(dy);
-      if (moved < 6) return;
-      const k = e.pointerType === 'touch' ? 0.0065 : 0.004;
-      player.yaw += dx * k;
-      player.pitch = THREE.MathUtils.clamp(player.pitch + dy * k, -1.2, 1.2);
+      const dx = e.clientX - sx;
+      const dy = e.clientY - sy;
+      if (!dragging && Math.hypot(dx, dy) < 6) return;
+      dragging = true;
+      // radians per pixel so a point under the finger stays under the finger
+      const k = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov) / el.clientHeight;
+      player.yaw = yaw0 + dx * k;
+      player.pitch = THREE.MathUtils.clamp(pitch0 + dy * k, -1.2, 1.2);
       player.lastLook = performance.now();
     };
     const up = (e: PointerEvent) => {
@@ -107,7 +111,7 @@ export function Player() {
       window.removeEventListener('keydown', kd);
       window.removeEventListener('keyup', ku);
     };
-  }, [gl]);
+  }, [gl, camera]);
 
   const ringGeo = useMemo(() => new THREE.RingGeometry(0.35, 0.5, 24), []);
 
@@ -148,13 +152,25 @@ export function Player() {
       } else {
         player.x += (dx / d) * step;
         player.z += (dz / d) * step;
-        // ease the view toward the walking direction unless the user is looking around
-        if (performance.now() - player.lastLook > 1200) {
+        // face the way we walk, unless the user has looked around since setting off
+        if (player.lastLook < player.walkStart) {
           const want = Math.atan2(-dx, -dz);
           player.yaw += angleDiff(player.yaw, want) * Math.min(1, dt * 2.5);
           player.pitch += (-0.04 - player.pitch) * Math.min(1, dt * 1.5);
         }
       }
+    }
+
+    // keep a comfortable horizontal view on tall phone screens
+    const cam = camera as THREE.PerspectiveCamera;
+    const fov = THREE.MathUtils.clamp(
+      THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(36)) / cam.aspect)),
+      65,
+      88,
+    );
+    if (Math.abs(cam.fov - fov) > 0.1) {
+      cam.fov = fov;
+      cam.updateProjectionMatrix();
     }
 
     // gentle head bob while walking

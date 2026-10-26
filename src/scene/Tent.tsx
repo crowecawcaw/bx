@@ -1,12 +1,12 @@
-import { Outlines } from '@react-three/drei';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { useStore } from '../store';
 import { Cloth } from './Cloth';
 import { TENT } from './dims';
-import { bronze, cloth, gold, INK, silver, toon } from './materials';
+import { bronze, cloth, gold, silver, toon } from './materials';
 import { DOOR_PILLAR_X, DOOR_PILLARS_Z, DOOR_SCREEN_X, VEIL_PILLAR_X, VEIL_PILLARS_Z } from './nav';
-import { goatHairTexture, innerCurtainTexture, needleworkTexture, skinTexture, veilTexture } from './textures';
+import { boardTexture, goatHairTexture, innerCurtainTexture, needleworkTexture, skinTexture, veilTexture } from './textures';
 
 const T = TENT.boardThickness;
 const HW = TENT.halfWidth;
@@ -98,10 +98,7 @@ function Walls() {
         );
       }
     }
-    // the two veil pillars' silver sockets complete the hundred (Ex 38:27)
-    for (const z of VEIL_PILLARS_Z) {
-      socketM.push(new THREE.Matrix4().compose(new THREE.Vector3(VEIL_PILLAR_X, 0.25, z), q, new THREE.Vector3(0.72, 0.5, 0.72)));
-    }
+    // the four veil pillars' silver sockets (drawn with the pillars) complete the hundred (Ex 38:27)
     return { boardM, socketM, ringM, tenonM };
   }, [list]);
 
@@ -137,11 +134,9 @@ function Walls() {
 
   return (
     <group userData={{ feature: 'boards' }}>
-      <instancedMesh ref={boardRef} args={[box, gold(), boardM.length]} castShadow receiveShadow>
-        <Outlines thickness={1.2} color={INK} />
+      <instancedMesh ref={boardRef} args={[box, toon('goldBoard', { color: '#f2c14e', emissive: '#4a3000', emissiveIntensity: 0.35, map: boardTexture() }), boardM.length]} castShadow receiveShadow>
       </instancedMesh>
       <instancedMesh ref={socketRef} args={[box, silver(), socketM.length]} castShadow receiveShadow>
-        <Outlines thickness={1.2} color={INK} />
       </instancedMesh>
       <instancedMesh ref={tenonRef} args={[box, toon('acaciaDark', { color: '#7a4a26' }), tenonM.length]} />
       <instancedMesh ref={ringRef} args={[ring, gold(), ringM.length]} />
@@ -328,9 +323,9 @@ function Coverings() {
       {layers >= 2 && (
         <>
           <Covering material={m.goat} off={0.08} sideBottom={TOP + 0.08 - 9} backBottom={0} uScale={4} vScale={4} folds={0.05} />
-          {/* the doubled sixth curtain at the front (Ex 26:9) */}
-          <mesh position={[TENT.frontX - 1, TOP + 0.13, 0]} material={m.goat} castShadow>
-            <boxGeometry args={[2, 0.05, (OUT + BAR_CLEAR + 0.1) * 2]} />
+          {/* the sixth curtain doubled at the front: half its width hangs down over the door (Ex 26:9; Rashi) */}
+          <mesh position={[DOOR_SCREEN_X + 0.15, TOP + 0.13 - 1, 0]} material={m.goat} castShadow>
+            <boxGeometry args={[0.05, 2, (OUT + BAR_CLEAR + 0.1) * 2]} />
           </mesh>
           {/* 50 bronze clasps where the sets of five and six meet (Ex 26:11) */}
           <Clasps x={TENT.frontX - 22} off={0.08} bottom={TOP + 0.08 - 9} count={50} material={bronze()} />
@@ -348,16 +343,15 @@ function Coverings() {
   );
 }
 
+const SOCKET = new RoundedBoxGeometry(0.6, 0.5, 0.6, 2, 0.05);
+
 function GoldPillar({ x, z, socket, capital }: { x: number; z: number; socket: THREE.Material; capital: boolean }) {
   return (
     <group position={[x, 0, z]}>
-      <mesh position={[0, 0.25, 0]} material={socket} castShadow>
-        <boxGeometry args={[0.6, 0.5, 0.6]} />
-        <Outlines thickness={1.2} color={INK} />
+      <mesh position={[0, 0.25, 0]} material={socket} castShadow geometry={SOCKET}>
       </mesh>
       <mesh position={[0, TOP / 2, 0]} material={gold()} castShadow>
         <cylinderGeometry args={[0.16, 0.18, TOP, 10]} />
-        <Outlines thickness={1.2} color={INK} />
       </mesh>
       {capital && (
         <mesh position={[0, TOP - 0.2, 0]} material={gold()}>
@@ -374,7 +368,7 @@ function GoldPillar({ x, z, socket, capital }: { x: number; z: number; socket: T
 
 export function Tent() {
   const open = useStore((s) => s.open);
-  const doorMat = useMemo(() => cloth('door', needleworkTexture('doorTex', 1024, 1024, 5)), []);
+  const doorMat = useMemo(() => cloth('door', needleworkTexture('doorTex', 1024, 1024, 5), 1.2, 0.04), []);
   const veilMat = useMemo(() => cloth('veil', veilTexture()), []);
   return (
     <group>

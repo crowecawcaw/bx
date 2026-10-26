@@ -73,6 +73,7 @@ export const FEATURES: Feature[] = [
     ],
     interpretation: [
       '"Needlework" (embroidery) is commanded, but no pattern is given. The pattern here is an abstract one in the four commanded colours. It has no cherubim, because cherubim are commanded only for the inner curtains and the veil.',
+      'The gate is 20 cubits with 4 pillars, and each 15-cubit side hanging has 3 (Ex 27:14-16). With every pillar 5 cubits apart, corner and gate-post pillars are shared between sections, which is how the totals of 60 work out.',
     ],
     refs: ['Exodus 27:13-16', 'Exodus 38:18-19'],
   },
@@ -141,7 +142,7 @@ export const FEATURES: Feature[] = [
       { text: "Covering of rams' skins dyed red, and a covering of tachash skins above", ref: 'Exodus 26:14' },
     ],
     interpretation: [
-      'No sizes are given for the rams’ skin and tachash coverings. Here they repeat the goats’-hair drape.',
+      'No sizes are given for the rams’ skin and tachash coverings. Here they hang to the ground on the sides and back.',
       '"Tachash" is uncertain. It has been translated badger, porpoise, dugong, or fine leather. It is shown as blue-grey leather.',
       'The goats’-hair curtains are shown in the black of traditional Bedouin goat-hair tents.',
     ],
@@ -191,6 +192,7 @@ export const FEATURES: Feature[] = [
     ],
     interpretation: [
       'Board thickness is not stated. It is shown as 1 cubit, as in the Talmud (Shabbat 98b). Then 6 west boards (9 cubits) plus ½ cubit from each corner board make exactly 10 cubits inside.',
+      'The 10-cubit height includes the tenons set into the silver sockets, so the walls stand 10 cubits from the ground.',
       'The bars are shown on the outside of the boards. Peel back the coverings to see them.',
     ],
     refs: ['Exodus 26:15-30', 'Exodus 36:20-34', 'Exodus 38:27'],
@@ -243,7 +245,9 @@ export const FEATURES: Feature[] = [
       { text: 'On the south side, opposite the table', ref: 'Exodus 40:24-25' },
     ],
     interpretation: [
-      'Height and branch shape are not given. Shown about 3 cubits tall with rounded branches. Some (e.g. Maimonides) drew straight diagonal branches.',
+      'Height and branch shape are not given. Shown about 3 cubits tall, shaped like an almond bough: curved branches that taper, each with three almond cups, knops and flowers (Ex 25:33). Some (e.g. Maimonides) drew straight diagonal branches.',
+      'Scripture says the lamps give light "over against it" (Ex 25:37), but not which way the branches face. Here they run north–south so the face turns toward the entrance; others turn it toward the table.',
+      'The three curved legs follow Rashi on Ex 25:31.',
     ],
     refs: ['Exodus 25:31-40', 'Exodus 37:17-24', 'Leviticus 24:1-4'],
   },
@@ -251,8 +255,8 @@ export const FEATURES: Feature[] = [
     id: 'incense',
     name: 'Altar of Incense',
     hebrew: 'מִזְבַּח הַקְּטֹרֶת (mizbaḥ ha-qetoret)',
-    bubble: [-21.5, 3.6, 0],
-    regions: ['holy', 'holiest'],
+    bubble: [-18.5, 3.6, 0],
+    regions: ['holy'],
     radius: 6,
     summary:
       'A small gold altar right in front of the veil. Sweet incense was burned on it every morning and evening, so its smoke rose toward the mercy seat beyond.',
@@ -311,8 +315,8 @@ export const FEATURES: Feature[] = [
       { text: 'Contained the golden pot of manna, Aaron’s rod and the tablets', ref: 'Hebrews 9:4' },
     ],
     interpretation: [
-      'The cherubim’s form is not described. They are shown as kneeling winged figures.',
-      'The poles run east–west, so their ends could be seen from the Holy Place (1 Kings 8:8).',
+      'The cherubim’s form is not described. They are shown kneeling and bowed toward the mercy seat, their wings meeting above it.',
+      'Which way the ark sat is not stated. Here it follows the Talmud (Menachot 98a-b) and Rashi on Ex 25:12: the ark’s length runs north–south, and the poles run east–west across its short ends, 2½ cubits apart, so bearers could walk between them. That lets the pole ends press toward the veil and be seen from the Holy Place (1 Kings 8:8). Many Christian illustrations instead put the poles along the long sides.',
       'The soft light above the mercy seat stands for the Presence (Lev 16:2). It is not a lamp.',
     ],
     refs: ['Exodus 25:10-22', 'Exodus 37:1-9', 'Hebrews 9:3-5'],
