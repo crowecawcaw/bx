@@ -1,4 +1,4 @@
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -75,6 +75,7 @@ export function Cloth({
     return { u, v, right };
   }, [geom, width, height, gather]);
 
+  const gl = useThree((s) => s.gl);
   const apply = (o: number) => {
     const p = geom.attributes.position as THREE.BufferAttribute;
     const { u, v, right } = base;
@@ -91,6 +92,7 @@ export function Cloth({
       p.setXYZ(i, x, -vv * height, z);
     }
     p.needsUpdate = true;
+    gl.shadowMap.needsUpdate = true; // shadows are drawn on demand (see Scene)
     geom.computeVertexNormals();
     geom.computeBoundingSphere();
     geom.computeBoundingBox();

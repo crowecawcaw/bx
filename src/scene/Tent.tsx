@@ -98,10 +98,7 @@ function Walls() {
         );
       }
     }
-    // the two veil pillars' silver sockets complete the hundred (Ex 38:27)
-    for (const z of VEIL_PILLARS_Z) {
-      socketM.push(new THREE.Matrix4().compose(new THREE.Vector3(VEIL_PILLAR_X, 0.25, z), q, new THREE.Vector3(0.72, 0.5, 0.72)));
-    }
+    // the four veil pillars' silver sockets (drawn with the pillars) complete the hundred (Ex 38:27)
     return { boardM, socketM, ringM, tenonM };
   }, [list]);
 
@@ -326,9 +323,9 @@ function Coverings() {
       {layers >= 2 && (
         <>
           <Covering material={m.goat} off={0.08} sideBottom={TOP + 0.08 - 9} backBottom={0} uScale={4} vScale={4} folds={0.05} />
-          {/* the doubled sixth curtain at the front (Ex 26:9) */}
-          <mesh position={[TENT.frontX - 1, TOP + 0.13, 0]} material={m.goat} castShadow>
-            <boxGeometry args={[2, 0.05, (OUT + BAR_CLEAR + 0.1) * 2]} />
+          {/* the sixth curtain doubled at the front: half its width hangs down over the door (Ex 26:9; Rashi) */}
+          <mesh position={[DOOR_SCREEN_X + 0.15, TOP + 0.13 - 1, 0]} material={m.goat} castShadow>
+            <boxGeometry args={[0.05, 2, (OUT + BAR_CLEAR + 0.1) * 2]} />
           </mesh>
           {/* 50 bronze clasps where the sets of five and six meet (Ex 26:11) */}
           <Clasps x={TENT.frontX - 22} off={0.08} bottom={TOP + 0.08 - 9} count={50} material={bronze()} />

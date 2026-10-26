@@ -1,6 +1,6 @@
-import { Html } from '@react-three/drei';
-import { Canvas, type ThreeEvent } from '@react-three/fiber';
-import { Suspense, useEffect, useState } from 'react';
+import { Html, PerformanceMonitor } from '@react-three/drei';
+import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { FEATURES } from '../data/specs';
 import { useStore, type CurtainId } from '../store';
@@ -79,19 +79,48 @@ function Bubbles() {
   );
 }
 
+/**
+ * Nothing that casts a shadow moves except the curtains, so the shadow map is drawn only
+ * while things load and while a curtain moves (Cloth asks for it). That halves the per-frame work.
+ */
+function ShadowWarmup() {
+  const n = useRef(0);
+  useFrame(({ gl }) => {
+    if (n.current++ < 90) gl.shadowMap.needsUpdate = true;
+  });
+  return null;
+}
+
+/** Quality steps: [max pixel ratio, post level]. Drops a step when frames run slow (e.g. a phone heating up). */
+const STEPS: [number, number][] = [
+  [1, 0],
+  [1.25, 1],
+  [1.5, 2],
+];
+
 export function Scene() {
+  const [step, setStep] = useState(2);
+  const dpr = Math.min(window.devicePixelRatio || 1, STEPS[step][0]);
   return (
     <Canvas
       shadows
-      dpr={[1, 1.75]}
+      dpr={dpr}
       gl={{ antialias: !POST, powerPreference: 'high-performance', stencil: false }}
       camera={{ fov: 70, near: 0.2, far: 3000 }}
       onCreated={({ gl }) => {
         if (DEBUG) (window as unknown as Record<string, unknown>).__gl = gl;
         gl.toneMapping = THREE.ACESFilmicToneMapping;
+        gl.shadowMap.autoUpdate = false;
         gl.toneMappingExposure = 1.05;
       }}
     >
+      <PerformanceMonitor
+        onDecline={() => setStep((s) => Math.max(0, s - 1))}
+        onIncline={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
+        flipflops={4}
+        onFallback={() => setStep(0)}
+      />
+      <ShadowWarmup />
       <Suspense fallback={null}>
         <group raycast={() => null}>
           <World />
@@ -111,7 +140,7 @@ export function Scene() {
         </group>
         <Bubbles />
         <Player />
-        {POST && <Post />}
+        {POST && <Post quality={STEPS[step][1]} dpr={dpr} />}
       </Suspense>
     </Canvas>
   );

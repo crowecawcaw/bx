@@ -91,13 +91,12 @@ export function Ark() {
       <Box p={[0, foot + (H - foot) / 2, 0]} s={[L, H - foot, W]} m={g} />
       {/* crown of gold round about */}
       <Frame y={H - 0.1} sx={L + 0.08} sz={W + 0.08} h={0.1} t={0.05} m={pureGold()} />
-      <Frame y={0.45} sx={L + 0.04} sz={W + 0.04} h={0.05} t={0.03} m={pureGold()} />
       {/* rings at the four feet, two on each end; poles never removed (Ex 25:12-15) */}
       {[1, -1].flatMap((sx) =>
         [1, -1].map((sz) => <Ring key={`${sx}${sz}`} axis="z" p={[sx * (L / 2 + 0.08), 0.32, sz * (W / 2 - 0.3)]} m={g} />),
       )}
       {[1, -1].map((sx) => (
-        <Pole key={sx} axis="z" p={[sx * (L / 2 + 0.08), 0.32, 0]} len={7} m={g} />
+        <Pole key={sx} axis="z" p={[sx * (L / 2 + 0.08), 0.32, 0]} len={9} m={g} />
       ))}
       {/* mercy seat of pure gold, 2½ x 1½ (Ex 25:17) */}
       <Box p={[0, H + 0.06, 0]} s={[L, 0.12, W]} m={pureGold()} />
@@ -419,10 +418,10 @@ export function IncenseAltar() {
           <boxGeometry args={[0.14, 0.16, 0.14]} />
         </mesh>
       ))}
-      {/* two rings under the crown on two sides, poles of acacia overlaid with gold (Ex 30:4-5) */}
+      {/* two rings under the crown "by the two corners thereof, upon the two sides"; gold-covered poles (Ex 30:4-5) */}
       {[1, -1].map((sz) => (
         <group key={sz}>
-          <Ring p={[0, H - 0.35, sz * (S / 2 + 0.06)]} m={g} r={0.08} />
+          <Ring p={[sz * 0.3, H - 0.35, sz * (S / 2 + 0.06)]} m={g} r={0.08} />
           <Pole p={[0, H - 0.35, sz * (S / 2 + 0.06)]} len={2.6} m={g} r={0.035} />
         </group>
       ))}

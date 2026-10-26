@@ -42,20 +42,23 @@ class InkEffect extends Effect {
   }
 }
 
-export function Post() {
-  const ink = useMemo(() => new InkEffect(Math.min(window.devicePixelRatio || 1, 1.75) * 0.9), []);
+/** quality: 2 = ambient occlusion + 4x MSAA, 1 = 2x MSAA, 0 = ink lines only. */
+export function Post({ quality, dpr }: { quality: number; dpr: number }) {
+  const ink = useMemo(() => new InkEffect(1), []);
+  ink.uniforms.get('thickness')!.value = dpr * 0.9;
+  const tone = <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />;
+  if (quality === 2)
+    return (
+      <EffectComposer key="hi" multisampling={4} enableNormalPass={false}>
+        <N8AO halfRes quality="performance" aoRadius={3} distanceFalloff={1.2} intensity={3.4} color="#3a2a48" />
+        <primitive object={ink} />
+        {tone}
+      </EffectComposer>
+    );
   return (
-    <EffectComposer multisampling={4} enableNormalPass={false}>
-      <N8AO
-        halfRes
-        quality="performance"
-        aoRadius={3}
-        distanceFalloff={1.2}
-        intensity={3.4}
-        color="#3a2a48"
-      />
+    <EffectComposer key={quality} multisampling={quality === 1 ? 2 : 0} enableNormalPass={false}>
       <primitive object={ink} />
-      <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+      {tone}
     </EffectComposer>
   );
 }
