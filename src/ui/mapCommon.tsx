@@ -23,10 +23,20 @@ export function usePlayerDot(zScale = 1) {
   return dot;
 }
 
-const lastTap = { t: 0, x: 0, y: 0 };
+/** The last map tap: when, where on screen, and the spot it chose. */
+const first = { t: -Infinity, x: 0, y: 0, spot: [0, 0, 0] };
 
-/** Map clicks are in world cubits (x east, y = z south): walk there, or jump there on a double tap. */
+/**
+ * Map clicks are in world cubits (x east, y = z south): walk there. A second tap soon after,
+ * within a few pixels on screen, jumps to the spot the first tap chose.
+ */
 export function tapToWalk(e: MouseEvent<SVGSVGElement>, zScale = 1) {
+  const now = e.timeStamp; // when the finger touched, even if the page was busy
+  if (now - first.t < 450 && Math.hypot(e.clientX - first.x, e.clientY - first.y) < 40) {
+    first.t = -Infinity;
+    teleportTo(first.spot[0], first.spot[1], first.spot[2]);
+    return;
+  }
   const svg = e.currentTarget;
   const pt = svg.createSVGPoint();
   pt.x = e.clientX;
@@ -36,12 +46,6 @@ export function tapToWalk(e: MouseEvent<SVGSVGElement>, zScale = 1) {
   const z = p.y / zScale;
   // stay on this storey if the spot is on it; otherwise go down to the ground
   const level = walkable(x, z, player.level) ? player.level : 0;
-  const now = performance.now();
-  if (now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) {
-    lastTap.t = 0;
-    teleportTo(x, z, level);
-    return;
-  }
-  Object.assign(lastTap, { t: now, x: e.clientX, y: e.clientY });
+  Object.assign(first, { t: now, x: e.clientX, y: e.clientY, spot: [x, z, level] });
   walkTo(x, z, level);
 }

@@ -2,8 +2,9 @@ import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { toon } from '../scene/materials';
-import { HALF, SEA, SLAB, X0, X1, rng, wallFoot, wallHeight, wallProfile } from './dims';
+import { HALF, SEA, SHORE_X, SLAB, X0, X1, rng, wallFoot, wallHeight, wallProfile } from './dims';
 import { FINISH, NOISE, dropletTexture, fogUniforms, pixelRatio, waterTime } from './shaders';
+import { OPEN, tide } from './tide';
 
 const LEN = X1 - X0;
 /** Texture space along the walls: one unit is the length the patterns were tuned for. */
@@ -73,10 +74,11 @@ function capGeometry(side: number) {
 const WALL_VS = /* glsl */ `
 uniform float uTime, uSide;
 varying vec2 vUv;
-varying float vDepth;
+varying float vDepth, vX;
 void main() {
   vUv = uv;
   vec3 p = position;
+  vX = p.x;
   float g = uv.y * uv.y;
   // the face heaves; the crest more than the foot
   p.z += (sin(p.x * 0.039 + uTime * 0.75) * 1.1 + sin(p.x * 0.0142 - uTime * 0.5) * 1.75) * g * uSide;
@@ -90,12 +92,13 @@ void main() {
 // uMode: 0 = the clear front face, 1 = the dark back face, 2 = the foam cap.
 const WALL_FS = /* glsl */ `
 precision highp float;
-uniform float uTime, uOpacity, uMode;
+uniform float uTime, uOpacity, uMode, uGoneX;
 varying vec2 vUv;
-varying float vDepth;
+varying float vDepth, vX;
 ${NOISE}
 ${FINISH}
 void main() {
+  if (vX > uGoneX) discard; // the waters have returned here
   float h = vUv.y, t = uTime;
   float flow = fbm(vec2(vUv.x * 26.0, h * 3.2 - t * 0.22));
   float q = floor((h * 0.80 + flow * 0.55) * 5.0) / 5.0;
@@ -127,7 +130,7 @@ void main() {
 
 function wallMaterial(side: number, mode: number) {
   return new THREE.ShaderMaterial({
-    uniforms: { uTime: waterTime, uSide: { value: side }, uOpacity: { value: 0.62 }, uMode: { value: mode }, ...fogUniforms },
+    uniforms: { uTime: waterTime, uSide: { value: side }, uOpacity: { value: 0.62 }, uMode: { value: mode }, uGoneX: tide.wallsGoneX, ...fogUniforms },
     vertexShader: WALL_VS,
     fragmentShader: WALL_FS,
     side: THREE.DoubleSide,
@@ -136,12 +139,10 @@ function wallMaterial(side: number, mode: number) {
   });
 }
 
-/** The open sea either side of the walls, seen as you climb toward the shore. */
-function SeaSurface() {
-  const mat = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        uniforms: { uTime: waterTime, ...fogUniforms },
+/** Open water. Nothing is drawn west of `minX` (the corridor's fill grows westward as the sea closes). */
+function seaMaterial(minX: { value: number }) {
+  return new THREE.ShaderMaterial({
+        uniforms: { uTime: waterTime, uMinX: minX, ...fogUniforms },
         vertexShader: /* glsl */ `
           uniform float uTime;
           varying vec2 vW;
@@ -155,12 +156,13 @@ function SeaSurface() {
             gl_Position = projectionMatrix * mv;
           }`,
         fragmentShader: /* glsl */ `
-          uniform float uTime;
+          uniform float uTime, uMinX;
           varying vec2 vW;
           varying float vDepth;
           ${NOISE}
           ${FINISH}
           void main() {
+            if (vW.x < uMinX) discard;
             float n = fbm(vW * 0.02 + vec2(uTime * 0.03, 0.0));
             float q = floor(n * 4.0) / 4.0;
             vec3 col = mix(vec3(0.06, 0.30, 0.38), vec3(0.22, 0.56, 0.60), q);
@@ -168,18 +170,25 @@ function SeaSurface() {
             col = mix(col, vec3(0.95, 0.93, 0.82), glint * 0.5);
             gl_FragColor = vec4(fogged(col, vDepth), 1.0);
           }`,
-      }),
-    [],
-  );
+  });
+}
+
+/** The open sea either side of the walls, and the level sea over the path once the waters return. */
+function SeaSurface() {
+  const open = useMemo(() => seaMaterial({ value: -OPEN }), []);
+  const fill = useMemo(() => seaMaterial(tide.filledX), []);
   const inner = HALF + SLAB - 1.5;
   const width = 2400;
   return (
     <>
       {[-1, 1].map((s) => (
-        <mesh key={s} material={mat} rotation={[-Math.PI / 2, 0, 0]} position={[(X0 + X1) / 2, SEA - 0.4, s * (inner + width / 2)]}>
+        <mesh key={s} material={open} rotation={[-Math.PI / 2, 0, 0]} position={[(X0 + X1) / 2, SEA - 0.4, s * (inner + width / 2)]}>
           <planeGeometry args={[LEN + 1600, width, 60, 40]} />
         </mesh>
       ))}
+      <mesh material={fill} rotation={[-Math.PI / 2, 0, 0]} position={[(X0 + SHORE_X) / 2, SEA - 0.4, 0]}>
+        <planeGeometry args={[SHORE_X - X0 + 20, (HALF + SLAB) * 2, 200, 8]} />
+      </mesh>
     </>
   );
 }
@@ -206,11 +215,11 @@ function Bubbles() {
     g.setAttribute('aRange', new THREE.Float32BufferAttribute(range, 2));
     g.setAttribute('aSeed', new THREE.Float32BufferAttribute(seed, 2));
     const m = new THREE.ShaderMaterial({
-      uniforms: { uTime: waterTime, uMap: { value: dropletTexture() }, uPx: pixelRatio },
+      uniforms: { uTime: waterTime, uMap: { value: dropletTexture() }, uPx: pixelRatio, uGoneX: tide.wallsGoneX },
       transparent: true,
       depthWrite: false,
       vertexShader: /* glsl */ `
-        uniform float uTime, uPx;
+        uniform float uTime, uPx, uGoneX;
         attribute vec2 aRange, aSeed;
         varying float vA;
         void main() {
@@ -220,7 +229,7 @@ function Bubbles() {
           p.z += sin(uTime * 1.4 + aSeed.x) * 0.35;
           vA = smoothstep(0.0, 4.0, y) * (1.0 - smoothstep(aRange.y * 0.8, aRange.y, y));
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
-          gl_PointSize = (26.0 + aSeed.x * 0.12) * (19.7 / max(1.0, -mv.z)) * uPx;
+          gl_PointSize = position.x > uGoneX ? 0.0 : (26.0 + aSeed.x * 0.12) * (19.7 / max(1.0, -mv.z)) * uPx;
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: /* glsl */ `
@@ -251,11 +260,11 @@ function CrestSpray() {
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.setAttribute('aSeed', new THREE.Float32BufferAttribute(seed, 2));
     const m = new THREE.ShaderMaterial({
-      uniforms: { uTime: waterTime, uMap: { value: dropletTexture() }, uPx: pixelRatio },
+      uniforms: { uTime: waterTime, uMap: { value: dropletTexture() }, uPx: pixelRatio, uGoneX: tide.wallsGoneX },
       transparent: true,
       depthWrite: false,
       vertexShader: /* glsl */ `
-        uniform float uTime, uPx;
+        uniform float uTime, uPx, uGoneX;
         attribute vec2 aSeed;
         varying float vA;
         void main() {
@@ -266,7 +275,7 @@ function CrestSpray() {
           p.x += t * 6.6 * aSeed.y;
           vA = smoothstep(0.0, 0.08, t) * (1.0 - smoothstep(0.55, 1.0, t));
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
-          gl_PointSize = 22.0 * (19.7 / max(1.0, -mv.z)) * uPx;
+          gl_PointSize = position.x > uGoneX ? 0.0 : 22.0 * (19.7 / max(1.0, -mv.z)) * uPx;
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: /* glsl */ `
@@ -323,7 +332,7 @@ function Fish() {
       const v = Math.min(0.95, f.v + Math.sin(t * 0.6 + f.phase) * 0.02);
       const q = wallProfile(v, f.x, f.side, false);
       // stay well inside the water as the walls get low near the shore
-      f.g.visible = wallHeight(f.x, f.side) > 18;
+      f.g.visible = wallHeight(f.x, f.side) > 18 && f.x < tide.wallsGoneX.value;
       f.g.position.set(q[0], q[1], q[2] + f.side * f.depth);
       f.g.rotation.set(Math.sin(t * 0.7 + f.phase) * 0.09, (f.dir > 0 ? 0 : Math.PI) + Math.sin(t * 4 + f.phase) * 0.14, 0);
     }

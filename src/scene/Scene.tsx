@@ -1,5 +1,5 @@
 import { Html, PerformanceMonitor } from '@react-three/drei';
-import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
+import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Sea } from '../sea/Sea';
@@ -37,6 +37,7 @@ function tagOf(o: THREE.Object3D | null) {
 function onTap(e: ThreeEvent<MouseEvent>) {
   e.stopPropagation();
   if (e.delta > 8) return; // that was a drag to look around
+  if (performance.now() < skipClickUntil) return; // the second tap of a double-tap
   const { curtain } = tagOf(e.object);
   const p = e.point;
   if (curtain) {
@@ -47,21 +48,55 @@ function onTap(e: ThreeEvent<MouseEvent>) {
     }
   }
   const level = levelFor(p.x, p.y, p.z, player.level);
-  // a second tap close to the first, soon after, blinks you there instead of walking
-  const now = performance.now();
-  const sx = e.nativeEvent.clientX;
-  const sy = e.nativeEvent.clientY;
-  if (now - lastTap.t < 320 && Math.hypot(sx - lastTap.x, sy - lastTap.y) < 40) {
-    lastTap.t = 0;
-    teleportTo(p.x, p.z, level);
-    return;
-  }
-  lastTap.t = now;
-  lastTap.x = sx;
-  lastTap.y = sy;
+  firstTap.spot = [p.x, p.z, level];
   walkTo(p.x, p.z, level);
 }
-const lastTap = { t: 0, x: 0, y: 0 };
+
+/**
+ * Double-tap to jump. The second tap is recognised on the screen, by time and by how many pixels
+ * it lands from the first, not by what it hits: walking off after the first tap turns the view,
+ * so the second may land on a wall or the sky. You jump to the spot the first tap chose.
+ * Times are the events' own timestamps (when the finger touched), so a busy frame between the
+ * two taps doesn't make a quick double-tap look slow.
+ */
+const DOUBLE_MS = 450;
+const DOUBLE_PX = 60;
+const firstTap = { t: -Infinity, x: 0, y: 0, spot: null as [number, number, number] | null };
+let skipClickUntil = 0;
+
+function DoubleTap() {
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    const el = gl.domElement;
+    let down = { t: 0, x: 0, y: 0 };
+    const onDown = (e: PointerEvent) => {
+      if (e.isPrimary) down = { t: e.timeStamp, x: e.clientX, y: e.clientY };
+    };
+    const onUp = (e: PointerEvent) => {
+      if (!e.isPrimary) return;
+      const now = e.timeStamp;
+      // a drag to look, or a long press, is not a tap
+      if (now - down.t > 400 || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 12) return;
+      const spot = firstTap.spot;
+      if (spot && now - firstTap.t < DOUBLE_MS && Math.hypot(e.clientX - firstTap.x, e.clientY - firstTap.y) < DOUBLE_PX) {
+        firstTap.t = -Infinity;
+        firstTap.spot = null;
+        skipClickUntil = performance.now() + 300; // this tap's click must not also start a walk
+        teleportTo(spot[0], spot[1], spot[2]);
+        return;
+      }
+      // a first tap; its click (which follows) records where it landed
+      Object.assign(firstTap, { t: now, x: e.clientX, y: e.clientY, spot: null });
+    };
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointerup', onUp);
+    return () => {
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointerup', onUp);
+    };
+  }, [gl]);
+  return null;
+}
 
 function Bubbles() {
   const [visible, setVisible] = useState<string[]>([]);
@@ -143,6 +178,7 @@ export function Scene() {
         onFallback={() => setStep(0)}
       />
       <ShadowWarmup />
+      <DoubleTap />
       <Suspense fallback={null}>
         <group raycast={() => null}>{SEA ? <SeaWorld /> : TEMPLE ? <TempleWorld /> : <World />}</group>
         <group onClick={onTap}>

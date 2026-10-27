@@ -141,7 +141,7 @@ export const SEA_FEATURES: Feature[] = [
       { text: 'Then sang Moses and the children of Israel this song', ref: 'Exodus 15:1' },
     ],
     interpretation: [
-      'The model lets the waters return on you when you climb above the level of the sea, to show how they came back. In Scripture the waters returned on Pharaoh\'s army; Israel had already crossed and stood on the shore (Ex 14:29-31).',
+      'When you step onto dry land above the level of the sea, the waters return behind you. The walls fall in from the shore back toward Egypt, and the multitude stands with you on the shore. Pharaoh\'s army is not shown.',
       'Scripture does not say how the far bank rose. Here the seabed curves gently up to the shore, and the walls get lower as you climb.',
     ],
     refs: ['Exodus 14:26-31', 'Exodus 15:1-10', 'Psalms 106:11'],

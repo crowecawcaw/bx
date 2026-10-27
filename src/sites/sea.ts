@@ -1,5 +1,6 @@
 import { SEA_FEATURES, SEA_GENERAL } from '../data/seaSpecs';
-import { REGION_LABEL, START, WALK_HALF, groundH, regionOf } from '../sea/dims';
+import { REGION_LABEL, SHORE_X, START, WALK_HALF, groundH, regionOf } from '../sea/dims';
+import { tide } from '../sea/tide';
 import type { Rect, SiteDef } from './types';
 
 const MIN_X = -95;
@@ -20,12 +21,13 @@ export const SEA: SiteDef = {
   bounds: { minX: MIN_X, maxX: MAX_X, minZ: -WALK_HALF - 2, maxZ: WALK_HALF + 2 },
   curtains: [],
   reach: 0,
-  // the feet of the walls, either side of the path
+  // the feet of the walls, either side of the path; once the waters return, the whole path is sea
   obstacles: () => {
     const rects: Rect[] = [
       [MIN_X, -WALK_HALF - 3, MAX_X, -WALK_HALF],
       [MIN_X, WALK_HALF, MAX_X, WALK_HALF + 3],
     ];
+    if (tide.returned) rects.push([MIN_X, -WALK_HALF, SHORE_X + 2, WALK_HALF]);
     return { rects, circles: [] };
   },
   heightAt: (x, z) => groundH(x, z),

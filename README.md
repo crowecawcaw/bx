@@ -32,7 +32,7 @@ Open with `?site=sea`. You walk east along the dry seabed with the multitude, be
 
 The crowd includes children, people carrying bundles on their heads and shoulders (Ex 12:34), staffs and packs, and flocks and herds (Ex 12:38). Each person has a head, neck and nose, a headcloth, veil or hair (some with beards), a belted robe, swinging arms and striding legs. A few hundred walkers are recycled around you.
 
-After about 600 cubits the seabed curves up toward the shore. If you climb above the level of the sea, the waters return (Ex 14:26-28): breakers rise on both sides, curl over and crash on you with spray, and you wake at the foot of the slope. In Scripture the waters returned on Pharaoh's army, not on Israel. The info panel says so. The path's width (40 cubits), the walls' height (56 cubits) and the slope are the model's choices. The code is in `src/sea/` and the verses are in `src/data/seaSpecs.ts`.
+After about 600 cubits the seabed curves up toward the shore. Step onto dry land above the level of the sea and the waters return behind you (Ex 14:26-28). Starting at the shore and racing back toward Egypt, the walls surge up, curl over the path and crash down with spray, then level into open sea. You watch from the shore with the multitude, and **Cross again** takes you back to the start. The path's width (40 cubits), the walls' height (56 cubits) and the slope are the model's choices. The code is in `src/sea/` and the verses are in `src/data/seaSpecs.ts`.
 
 ## Development
 

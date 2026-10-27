@@ -20,17 +20,14 @@ export const player = {
   lastLook: 0,
   walkStart: 0,
   target: null as Waypoint | null,
-  /** While set, taps, keys and paths are ignored (e.g. while a wave carries you off). */
-  locked: false,
 };
 
-/** Extra camera offsets a site can add on top of the player's view: shake, tumble, a look upward. */
+/** Extra camera offsets a site can add on top of the player's view (e.g. the ground shaking). */
 export const cameraFx = { x: 0, y: 0, z: 0, pitch: 0, roll: 0 };
 
 const SPEED = 5.5; // cubits per second (≈ 2.5 m/s)
 
 export function walkTo(x: number, z: number, level = player.level) {
-  if (player.locked) return false;
   const p = findPath(player.x, player.z, player.level, x, z, level);
   if (!p) return false;
   player.path = p;
@@ -56,7 +53,7 @@ function getVeil() {
 
 /** Blink to a spot: quick fade to black, move, fade back in. Only to places you could walk to. */
 export function teleportTo(x: number, z: number, level = player.level) {
-  if (teleporting || player.locked) return false;
+  if (teleporting) return false;
   const p = findPath(player.x, player.z, player.level, x, z, level);
   if (!p) return false;
   const [tx, tz, tl] = p[p.length - 1];
@@ -175,7 +172,7 @@ export function Player() {
       player.yaw += turn * dt * 1.8;
       player.lastLook = performance.now();
     }
-    if (fwd && !player.locked) {
+    if (fwd) {
       player.path = [];
       player.target = null;
       const nx = player.x - Math.sin(player.yaw) * fwd * SPEED * dt;
@@ -192,7 +189,7 @@ export function Player() {
     }
 
     // follow the planned path
-    if (player.path.length && !player.locked) {
+    if (player.path.length) {
       const [tx, tz, tl] = player.path[0];
       const dx = tx - player.x;
       const dz = tz - player.z;

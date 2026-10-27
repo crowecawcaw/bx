@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { player } from '../scene/Player';
-import { CLOUD_X, CRASH_AT, HALF, RISE_X, SLAB, START, groundH } from '../sea/dims';
+import { CLOUD_X, HALF, RISE_X, SHORE_X, SLAB, START } from '../sea/dims';
+import { tide } from '../sea/tide';
 import { SITE } from '../sites';
 import { tapToWalk, usePlayerDot } from './mapCommon';
 
@@ -8,19 +9,18 @@ import { tapToWalk, usePlayerDot } from './mapCommon';
 const ZS = 6;
 const { minX, maxX } = SITE.bounds;
 
-/** Where the climbing seabed reaches the level of the sea. */
-const SEA_LEVEL_X = (() => {
-  let x = 0;
-  while (x < maxX && groundH(x, 0) < CRASH_AT) x += 2;
-  return x;
-})();
-
 /** Strip map of the crossing, west to east; tap to walk, double-tap to jump. */
 export function SeaMap() {
   const dot = usePlayerDot(ZS);
+  const path = useRef<SVGGElement>(null);
+  // once the waters return, the path is drawn as sea
+  useEffect(() => {
+    const id = setInterval(() => path.current?.setAttribute('opacity', tide.returned ? '0' : '1'), 300);
+    return () => clearInterval(id);
+  }, []);
   const top = (HALF + SLAB + 3) * ZS;
   const vb = `${minX - 15} ${-top} ${maxX - minX + 30} ${top * 2}`;
-  const path = HALF * ZS;
+  const half = HALF * ZS;
   return (
     <svg className="minimap sea" viewBox={vb} onClick={(e) => tapToWalk(e, ZS)} aria-label="Map: tap to walk">
       <defs>
@@ -30,15 +30,17 @@ export function SeaMap() {
         </linearGradient>
       </defs>
       <rect x={minX - 15} y={-top} width={maxX - minX + 30} height={top * 2} className="mm-sea" />
-      <rect x={minX - 15} y={-path} width={RISE_X - minX + 15} height={path * 2} className="mm-path" />
-      <rect x={RISE_X} y={-path} width={SEA_LEVEL_X - RISE_X} height={path * 2} fill="url(#mm-rise)" />
-      <rect x={SEA_LEVEL_X} y={-top} width={maxX - SEA_LEVEL_X + 15} height={top * 2} className="mm-land" />
-      <line x1={SEA_LEVEL_X} y1={-top} x2={SEA_LEVEL_X} y2={top} className="mm-sealevel" />
+      <g ref={path}>
+        <rect x={minX - 15} y={-half} width={RISE_X - minX + 15} height={half * 2} className="mm-path" />
+        <rect x={RISE_X} y={-half} width={SHORE_X - RISE_X} height={half * 2} fill="url(#mm-rise)" />
+      </g>
+      <rect x={SHORE_X} y={-top} width={maxX - SHORE_X + 15} height={top * 2} className="mm-land" />
+      <line x1={SHORE_X} y1={-top} x2={SHORE_X} y2={top} className="mm-sealevel" />
       <circle cx={CLOUD_X + 40} cy={0} r={70} className="mm-cloud" />
-      <text x={minX + 6} y={-path - 14} className="mm-label big">
+      <text x={minX + 6} y={-half - 14} className="mm-label big">
         W
       </text>
-      <text x={maxX - 40} y={-path - 14} className="mm-label big">
+      <text x={maxX - 40} y={-half - 14} className="mm-label big">
         E
       </text>
       <g ref={dot}>

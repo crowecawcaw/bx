@@ -20,19 +20,19 @@ export const RISE_X = 600;
 export const RISE_LEN = 440;
 export const RISE_H = 70;
 /** The near (west) shore, hidden behind the pillar of cloud. */
-const WEST_X = -110;
-const WEST_LEN = 220;
+export const WEST_X = -110;
+export const WEST_LEN = 220;
 
 /** Where the pillar of cloud stands, between Israel and Egypt (Ex 14:19-20). */
 export const CLOUD_X = -150;
 
-/** The crowd walks on toward the far shore but stops short of the open sea. */
-export const CROWD_MAX = RISE_X + 230;
+/** Where the far bank comes up out of the sea: step past it onto dry land and the waters return. */
+export const SHORE_X = RISE_X + (RISE_LEN / Math.PI) * Math.acos(1 - (2 * SEA) / RISE_H);
 
-/** Once the ground underfoot comes within this of the sea's surface, the waters return. */
-export const CRASH_AT = SEA - 2;
-/** After the crash you wake here, at the foot of the slope. */
-export const RESET_X = RISE_X + 20;
+/** The crowd walks up out of the sea and gathers on the far shore, up to here. */
+export const CROWD_MAX = SHORE_X + 130;
+/** ...but no nearer the water than this, so you can watch the sea from the shore over their heads. */
+export const CROWD_MIN_STOP = SHORE_X + 40;
 
 export const START = { x: 0, z: 0, yaw: -Math.PI / 2 };
 
@@ -138,11 +138,11 @@ export type Region = 'seabed' | 'rise' | 'shore';
 
 export function regionOf(x: number): Region {
   if (x < RISE_X + 60) return 'seabed';
-  return groundH(x, 0) < CRASH_AT - 6 ? 'rise' : 'shore';
+  return x < SHORE_X ? 'rise' : 'shore';
 }
 
 export const REGION_LABEL: Record<Region, string> = {
   seabed: 'In the Midst of the Sea',
   rise: 'Toward the Far Shore',
-  shore: 'Level with the Sea',
+  shore: 'The Far Shore',
 };

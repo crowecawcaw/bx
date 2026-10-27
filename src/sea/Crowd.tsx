@@ -5,7 +5,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { toon } from '../scene/materials';
 import { DEBUG } from '../scene/dims';
 import { player } from '../scene/Player';
-import { CROWD_MAX, WALK_HALF, groundH, rng, vnoise } from './dims';
+import { CROWD_MAX, CROWD_MIN_STOP, WALK_HALF, groundH, rng, vnoise } from './dims';
+import { tide } from './tide';
 
 /*
  * The children of Israel, "about six hundred thousand on foot that were men, beside children",
@@ -167,7 +168,12 @@ interface Walker {
   /** How far the head turns to look about, and how fast. */
   look: number;
   stride: number;
+  /** Where this walker comes to rest on the far shore. */
+  stop: number;
 }
+
+/** Somewhere along the walk, more of them ahead of you than behind. */
+const spawnX = (rnd: () => number) => -57 + Math.pow(rnd(), 0.6) * (CROWD_MAX - 57);
 
 function makeWalkers(rnd: () => number) {
   const w: Walker[] = [];
@@ -178,7 +184,7 @@ function makeWalkers(rnd: () => number) {
       const lane = (rnd() - 0.5) * 2;
       w.push({
         kind,
-        x: -57 + Math.pow(rnd(), 0.6) * (CROWD_MAX - 120 + 57),
+        x: spawnX(rnd),
         z: lane * 10,
         lane,
         speed: kind === 'cattle' ? 1.8 + rnd() * 0.5 : 1.75 + rnd() * 1.3,
@@ -187,6 +193,7 @@ function makeWalkers(rnd: () => number) {
         size,
         look: rnd() < 0.45 ? 0.3 + rnd() * 0.5 : 0.08,
         stride: child ? 1.25 : 1,
+        stop: CROWD_MAX - rnd() * (CROWD_MAX - CROWD_MIN_STOP),
       });
     }
   };
@@ -198,12 +205,13 @@ function makeWalkers(rnd: () => number) {
 
 /** Keeps the crowd around the player: walkers far ahead or behind are moved to the other end. */
 function recycle(w: Walker, px: number, rnd: () => number, dt: number) {
+  if (tide.returned) return; // everyone is across
   const dx = w.x - px;
-  const stopped = w.x >= CROWD_MAX - 1;
+  const stopped = w.x >= w.stop - 1;
   // gathered at the end of the walk: drift away (out of sight) only when you are not near them
   const leave = stopped && Math.abs(dx) > 160 && rnd() < dt * 0.5;
   if (dx > AHEAD || leave) w.x = Math.max(-85, px - 70 - rnd() * 60);
-  else if (dx < -BEHIND) w.x = px + 300 + rnd() * 500 < CROWD_MAX - 10 ? px + 300 + rnd() * 500 : Math.max(-85, px - 70 - rnd() * 60);
+  else if (dx < -BEHIND) w.x = px + 300 + rnd() * 500 < w.stop - 10 ? px + 300 + rnd() * 500 : Math.max(-85, px - 70 - rnd() * 60);
   else return;
   w.lane = (rnd() - 0.5) * 2;
   w.z = w.lane * 10;
@@ -319,6 +327,7 @@ export function Crowd() {
     s: new THREE.Vector3(),
   });
   const clock = useRef(0);
+  const seen = useRef(tide.version);
 
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05);
@@ -326,11 +335,21 @@ export function Crowd() {
     const T = tmp.current;
     const px = player.x;
 
+    if (seen.current !== tide.version) {
+      seen.current = tide.version;
+      for (const w of walkers) {
+        // the waters return: all Israel is across, gathered on the shore with you (Ex 14:29-31)
+        if (tide.returned) {
+          if (w.x < CROWD_MIN_STOP - 10) w.x = CROWD_MIN_STOP - 10 + rnd() * (w.stop - CROWD_MIN_STOP + 10);
+        } else w.x = spawnX(rnd); // crossing again: back along the path
+      }
+    }
+
     /** Moves a walker along, and places its body. Returns the walk phase, or null if out of sight. */
     const step = (w: Walker, height: number) => {
       recycle(w, px, rnd, dt);
-      // slow to a halt at the end of the walk
-      const go = Math.min(1, Math.max(0, (CROWD_MAX - w.x) / 40));
+      // slow to a halt on the far shore
+      const go = Math.min(1, Math.max(0, (w.stop - w.x) / 12));
       w.x += w.speed * go * dt;
       const dx = w.x - px;
       const spread = 10 * (1 - Math.min(1, Math.max(0, dx) / 830) * 0.66); // the column narrows into the distance
