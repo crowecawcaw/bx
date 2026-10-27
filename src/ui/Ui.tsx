@@ -2,15 +2,24 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { type Requirement } from '../data/specs';
 import { AVAILABLE, abbreviate, lookup } from '../data/verses';
 import { COURT, POS, TENT } from '../scene/dims';
-import { siteHref } from '../site';
+import { SITE_ID, siteHref, type SiteId } from '../site';
 import { SITE } from '../sites';
 import { useStore } from '../store';
 import { tapToWalk, usePlayerDot } from './mapCommon';
+import { SeaMap, Walked } from './SeaMap';
 import { TempleMap } from './TempleMap';
 
 const FEATURES = SITE.features;
 const GENERAL = SITE.general;
 const TEMPLE = SITE.id === 'temple';
+const SEA = SITE.id === 'sea';
+const OTHERS: [SiteId, string][] = (
+  [
+    ['tabernacle', 'Visit the tabernacle ›'],
+    ['temple', "Visit Solomon's Temple ›"],
+    ['sea', 'Cross the Red Sea ›'],
+  ] as [SiteId, string][]
+).filter(([id]) => id !== SITE_ID);
 
 const LAYER_NAMES = ['Bare frame', 'Linen with cherubim', "+ Goats' hair", "+ Rams' skins", '+ Tachash skins (all)'];
 
@@ -56,7 +65,7 @@ function InfoPanel() {
       </header>
       <div className="sheet-body">
         <p className="summary">{f.summary}</p>
-        <h3>What Scripture requires</h3>
+        <h3>{SITE.reqHeading ?? 'What Scripture requires'}</h3>
         <ReqList items={f.requirements} />
         {f.interpretation && (
           <>
@@ -128,7 +137,7 @@ function ScripturePanel() {
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={TEMPLE ? 'e.g. 1 Kings 6:23-28' : 'e.g. Exodus 26:31-33'}
+          placeholder={SEA ? 'e.g. Exodus 14:21-22' : TEMPLE ? 'e.g. 1 Kings 6:23-28' : 'e.g. Exodus 26:31-33'}
           aria-label="Bible reference"
           enterKeyHint="search"
         />
@@ -164,9 +173,15 @@ function Help() {
   return (
     <div className="help">
       <p>
-        <b>Tap</b> the ground to walk there. <b>Drag</b> to look around. On a keyboard, use <b>WASD</b> or the arrow keys.
+        <b>Tap</b> the ground to walk there, or <b>double-tap</b> to jump there. <b>Drag</b> to look around. On a
+        keyboard, use <b>WASD</b> or the arrow keys.
       </p>
-      {TEMPLE ? (
+      {SEA ? (
+        <p>
+          Walk with the multitude toward the far shore. The seabed rises as you near it. See what happens when you climb
+          above the level of the sea (Ex 14:26-28).
+        </p>
+      ) : TEMPLE ? (
         <p>
           <b>Tap a door</b> when you are close to open or close it: the gate of the inner court, the doors of the temple,
           the doors of the oracle, and the veil.
@@ -180,22 +195,24 @@ function Help() {
         <b>Info bubbles</b> appear near key objects. Tap one for the scriptural requirements and the verses.
       </p>
       <p>
-        {!TEMPLE && (
+        {SITE.layers && (
           <>
             <b>Layers</b> peels back the four coverings of the tent.{' '}
           </>
         )}
-        <b>Map</b>: tap a spot to walk there.
+        <b>Map</b>: tap a spot to walk there, or double-tap to jump.
       </p>
       <p className="fine">
         Measurements are in cubits (about 18 in / 46 cm). Scripture text is the King James Version (public domain).
         Where Scripture gives no detail, each info panel says what the model assumes.
       </p>
-      <p>
-        <a className="switch" href={siteHref(TEMPLE ? 'tabernacle' : 'temple')}>
-          {TEMPLE ? 'Visit the tabernacle ›' : "Visit Solomon's Temple ›"}
-        </a>
-      </p>
+      {OTHERS.map(([id, label]) => (
+        <p key={id}>
+          <a className="switch" href={siteHref(id)}>
+            {label}
+          </a>
+        </p>
+      ))}
     </div>
   );
 }
@@ -204,7 +221,7 @@ function SidePanel() {
   const panel = useStore((s) => s.panel);
   const openPanel = useStore((s) => s.openPanel);
   if (!panel) return null;
-  const title = { specs: 'Requirements', scripture: 'Scripture', help: 'How to explore' }[panel];
+  const title = { specs: SITE.specsTitle ?? 'Requirements', scripture: 'Scripture', help: 'How to explore' }[panel];
   return (
     <aside className="sheet tall" role="dialog" aria-label={title}>
       <header>
@@ -280,6 +297,7 @@ export function Ui() {
           <div className="region">{SITE.regionLabel[region]}</div>
           <div className="progress">
             {discovered.length}/{FEATURES.length} explored
+            {SEA && <Walked />}
           </div>
         </div>
         <nav className="actions">
@@ -306,7 +324,7 @@ export function Ui() {
           </button>
         </nav>
       </div>
-      {map && (TEMPLE ? <TempleMap /> : <TabernacleMap />)}
+      {map && (SEA ? <SeaMap /> : TEMPLE ? <TempleMap /> : <TabernacleMap />)}
       {toast && <div className="toast">{toast}</div>}
       <InfoPanel />
       <SidePanel />

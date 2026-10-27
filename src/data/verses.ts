@@ -12,6 +12,7 @@ const ALIASES: Record<string, string> = {
   '1ch': '1 Chronicles', '1chr': '1 Chronicles', '1chron': '1 Chronicles', '1chronicles': '1 Chronicles',
   '2ch': '2 Chronicles', '2chr': '2 Chronicles', '2chron': '2 Chronicles', '2chronicles': '2 Chronicles',
   jer: 'Jeremiah', jeremiah: 'Jeremiah',
+  ps: 'Psalms', psa: 'Psalms', psalm: 'Psalms', psalms: 'Psalms',
   heb: 'Hebrews', hebrews: 'Hebrews',
 };
 
@@ -24,6 +25,7 @@ const SHORT: Record<string, string> = {
   '1 Chronicles': '1 Chr',
   '2 Chronicles': '2 Chr',
   Jeremiah: 'Jer',
+  Psalms: 'Ps',
   Hebrews: 'Heb',
 };
 

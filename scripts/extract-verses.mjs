@@ -5,8 +5,8 @@ import fs from 'node:fs';
 
 const SRC = 'https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_kjv.json';
 const WANT = {
-  // the tabernacle
-  Exodus: [20, 25, 26, 27, 30, 31, 35, 36, 37, 38, 39, 40],
+  // the tabernacle (and the crossing of the Red Sea, Ex 12–15)
+  Exodus: [12, 13, 14, 15, 20, 25, 26, 27, 30, 31, 35, 36, 37, 38, 39, 40],
   Leviticus: [24],
   Numbers: [4],
   // Solomon's Temple
@@ -15,7 +15,8 @@ const WANT = {
   '1 Chronicles': [28],
   '2 Chronicles': [2, 3, 4, 5, 7],
   Jeremiah: [52],
-  Hebrews: [9],
+  Psalms: [77, 106],
+  Hebrews: [9, 11],
 };
 
 const text = process.argv[2]

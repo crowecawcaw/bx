@@ -12,6 +12,10 @@ export interface SiteDef {
   general: Requirement[];
   /** Short summary for the Specs panel. */
   specsIntro: string;
+  /** Title of the Specs panel. Default "Requirements". */
+  specsTitle?: string;
+  /** Heading over a feature's list of verses. Default "What Scripture requires". */
+  reqHeading?: string;
   regionOf: (x: number, z: number) => string;
   regionLabel: Record<string, string>;
   start: { x: number; z: number; yaw: number };

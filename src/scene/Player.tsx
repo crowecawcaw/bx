@@ -22,6 +22,9 @@ export const player = {
   target: null as Waypoint | null,
 };
 
+/** Extra camera offsets a site can add on top of the player's view (e.g. the ground shaking). */
+export const cameraFx = { x: 0, y: 0, z: 0, pitch: 0, roll: 0 };
+
 const SPEED = 5.5; // cubits per second (≈ 2.5 m/s)
 
 export function walkTo(x: number, z: number, level = player.level) {
@@ -227,8 +230,8 @@ export function Player() {
     const bob = walking ? Math.sin(state.clock.elapsedTime * 9) * 0.04 : 0;
     const ground = heightAt(player.x, player.z, player.level);
     player.y = Math.abs(ground - player.y) > 3 ? ground : player.y + (ground - player.y) * Math.min(1, dt * 12);
-    camera.position.set(player.x, player.y + EYE_HEIGHT + bob, player.z);
-    camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
+    camera.position.set(player.x + cameraFx.x, player.y + EYE_HEIGHT + bob + cameraFx.y, player.z + cameraFx.z);
+    camera.rotation.set(player.pitch + cameraFx.pitch, player.yaw, cameraFx.roll, 'YXZ');
 
     if (marker.current) {
       marker.current.visible = !!player.target;

@@ -108,6 +108,7 @@ jobs:
 
           - Tabernacle: $url
           - Temple: ${url}?site=temple
+          - Red Sea: ${url}?site=sea
 
           Built from ${SHA:0:7}. GitHub Pages can take a minute to update after this comment."
           fi

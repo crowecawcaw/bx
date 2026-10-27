@@ -162,3 +162,24 @@ button { font: inherit; color: inherit; cursor: pointer; }
   text-decoration: none; color: var(--ink); background: var(--paper-2);
 }
 .intro .tabs span { background: var(--gold); color: #fff; }
+
+/* Red Sea map */
+.minimap.sea { width: min(70vw, 340px); background: #2c6f80; }
+.mm-sea { fill: #2c6f80; }
+.mm-path { fill: #e6d2a6; }
+.mm-land { fill: #c9a66e; }
+.mm-sealevel { stroke: #fff; stroke-width: 4; stroke-dasharray: 10 8; }
+.mm-cloud { fill: #cbbba4; stroke: var(--ink); stroke-width: 3; opacity: 0.9; }
+.minimap.sea .mm-label.big { font-size: 34px; fill: #fff; }
+
+/* The waters return: the verse, and a way back */
+.sea-return {
+  position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 70px); transform: translateX(-50%);
+  width: min(360px, calc(100vw - 32px)); z-index: 45; text-align: center;
+  background: rgba(251, 245, 232, 0.94); border: 2px solid var(--ink); border-radius: 14px; box-shadow: var(--shadow);
+  padding: 10px 14px 12px; opacity: 0; pointer-events: none; transition: opacity 0.8s ease;
+}
+.sea-return.on { opacity: 1; pointer-events: auto; }
+.sea-return p { margin: 0 0 8px; font-style: italic; font-size: 15.5px; line-height: 1.4; }
+.sea-return p span { display: block; font-style: normal; font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+.sea-return .primary { margin-top: 0; padding: 7px 18px; font-size: 15px; }
