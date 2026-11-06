@@ -4,8 +4,9 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { POS } from './dims';
-import { bronze, gold, pureGold, toon } from './materials';
+import { bronze, pureGold, toon } from './materials';
 import { Cherub } from './Cherub';
+import { Model } from './Model';
 import { netTexture } from './textures';
 
 /** Where a piece stands: tabernacle defaults, overridden by the temple. */
@@ -76,37 +77,15 @@ export function Frame({ y, sx, sz, h, t, m }: { y: number; sx: number; sz: numbe
 // ───────────────────────── Ark & mercy seat (Ex 25:10-22) ─────────────────────────
 
 export function Ark({ at = POS.ark, rotY = Math.PI / 2, feature = 'ark', presence = true }: Placement & { presence?: boolean } = {}) {
-  const g = gold();
   const L = 2.5;
-  const W = 1.5;
   const H = 1.5;
-  const foot = 0.12;
   return (
     // Length runs north–south and the poles east–west, so from the door you face the long side
     // and see both cherubim; the pole ends press toward the veil (1 Kgs 8:8; Rashi on Ex 25:12).
     <group position={[at[0], 0, at[1]]} rotation={[0, rotY, 0]} userData={{ feature }}>
-      {/* four feet */}
-      {[
-        [1, 1],
-        [1, -1],
-        [-1, 1],
-        [-1, -1],
-      ].map(([sx, sz], i) => (
-        <Box key={i} p={[sx * (L / 2 - 0.12), foot / 2, sz * (W / 2 - 0.12)]} s={[0.22, foot, 0.22]} m={g} />
-      ))}
-      {/* chest, overlaid within and without */}
-      <Box p={[0, foot + (H - foot) / 2, 0]} s={[L, H - foot, W]} m={g} />
-      {/* crown of gold round about */}
-      <Frame y={H - 0.1} sx={L + 0.08} sz={W + 0.08} h={0.1} t={0.05} m={pureGold()} />
-      {/* rings at the four feet, two on each end; poles never removed (Ex 25:12-15) */}
-      {[1, -1].flatMap((sx) =>
-        [1, -1].map((sz) => <Ring key={`${sx}${sz}`} axis="z" p={[sx * (L / 2 + 0.08), 0.32, sz * (W / 2 - 0.3)]} m={g} />),
-      )}
-      {[1, -1].map((sx) => (
-        <Pole key={sx} axis="z" p={[sx * (L / 2 + 0.08), 0.32, 0]} len={9} m={g} />
-      ))}
-      {/* mercy seat of pure gold, 2½ x 1½ (Ex 25:17) */}
-      <Box p={[0, H + 0.06, 0]} s={[L, 0.12, W]} m={pureGold()} />
+      {/* feet, the chest overlaid within and without, its crown, rings and poles, and the mercy
+          seat of pure gold (Ex 25:10-17): modelled in tools/models/build.py */}
+      <Model name="ark" />
       {/* two cherubim of one piece with it, facing one another (Ex 25:18-20) */}
       <group position={[-L / 2 + 0.22, H + 0.12, 0]}>
         <Cherub />
@@ -123,35 +102,13 @@ export function Ark({ at = POS.ark, rotY = Math.PI / 2, feature = 'ark', presenc
 // ───────────────────────── Table of showbread (Ex 25:23-30) ─────────────────────────
 
 export function Table({ at = POS.table, rotY = 0, feature = 'table' }: Placement = {}) {
-  const g = gold();
-  const L = 2;
-  const W = 1;
   const H = 1.5;
-  const hand = 1 / 6; // a handbreadth is one sixth of a cubit
   const bread = toon('bread', { color: '#d9a35c' });
-  const legs: [number, number][] = [
-    [1, 1],
-    [1, -1],
-    [-1, 1],
-    [-1, -1],
-  ];
   return (
     <group position={[at[0], 0, at[1]]} rotation={[0, rotY, 0]} userData={{ feature }}>
-      <Box p={[0, H - 0.04, 0]} s={[L, 0.08, W]} m={g} />
-      {legs.map(([sx, sz], i) => (
-        <Box key={i} p={[sx * (L / 2 - 0.07), (H - 0.08) / 2, sz * (W / 2 - 0.07)]} s={[0.1, H - 0.08, 0.1]} m={g} />
-      ))}
-      {/* crown round the top, and the border of a handbreadth with its crown (Ex 25:24-25) */}
-      <Frame y={H + 0.04} sx={L} sz={W} h={0.08} t={0.04} m={pureGold()} />
-      <Frame y={H - 0.4} sx={L - 0.1} sz={W - 0.1} h={hand} t={0.03} m={g} />
-      <Frame y={H - 0.4 + hand / 2 + 0.02} sx={L - 0.06} sz={W - 0.06} h={0.04} t={0.03} m={pureGold()} />
-      {/* rings at the feet by the border, poles along the length (Ex 25:26-28) */}
-      {legs.map(([sx, sz], i) => (
-        <Ring key={i} p={[sx * (L / 2 - 0.2), H - 0.55, sz * (W / 2 + 0.06)]} m={g} r={0.08} />
-      ))}
-      {[1, -1].map((sz) => (
-        <Pole key={sz} p={[0, H - 0.55, sz * (W / 2 + 0.06)]} len={3.4} m={g} r={0.04} />
-      ))}
+      {/* top and turned legs, the crown, the border of a handbreadth with its crown, rings and
+          poles (Ex 25:23-28): modelled in tools/models/build.py */}
+      <Model name="table" />
       {/* twelve loaves in two rows of six, frankincense on each (Lev 24:5-7) */}
       {[-0.48, 0.48].map((x) => (
         <group key={x} position={[x, H + 0.08, 0]}>
@@ -380,7 +337,7 @@ export function Menorah({ at = POS.menorah, rotY = -Math.PI / 2, feature = 'meno
 
 export function Smoke({ y, spread, count, color, scale = 1 }: { y: number; spread: number; count: number; color: string; scale?: number }) {
   const group = useRef<THREE.Group>(null);
-  const mat = useMemo(() => new THREE.MeshToonMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false }), [color]);
+  const mat = useMemo(() => new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false }), [color]);
   const seeds = useMemo(() => Array.from({ length: count }, (_, i) => ({ o: i / count, a: Math.random() * 6.28 })), [count]);
   useFrame(({ clock }) => {
     const g = group.current;
@@ -406,32 +363,12 @@ export function Smoke({ y, spread, count, color, scale = 1 }: { y: number; sprea
 }
 
 export function IncenseAltar({ at = POS.incense, feature = 'incense' }: Placement = {}) {
-  const g = gold();
-  const S = 1;
   const H = 2;
   return (
     <group position={[at[0], 0, at[1]]} userData={{ feature }}>
-      <Box p={[0, H / 2, 0]} s={[S, H, S]} m={g} />
-      {/* crown of gold round about (Ex 30:3) */}
-      <Frame y={H - 0.12} sx={S + 0.08} sz={S + 0.08} h={0.1} t={0.05} m={pureGold()} />
-      {/* horns of one piece with it (Ex 30:2) */}
-      {[
-        [1, 1],
-        [1, -1],
-        [-1, 1],
-        [-1, -1],
-      ].map(([sx, sz], i) => (
-        <mesh key={i} position={[sx * 0.42, H + 0.08, sz * 0.42]} material={g}>
-          <boxGeometry args={[0.14, 0.16, 0.14]} />
-        </mesh>
-      ))}
-      {/* two rings under the crown "by the two corners thereof, upon the two sides"; gold-covered poles (Ex 30:4-5) */}
-      {[1, -1].map((sz) => (
-        <group key={sz}>
-          <Ring p={[sz * 0.3, H - 0.35, sz * (S / 2 + 0.06)]} m={g} r={0.08} />
-          <Pole p={[0, H - 0.35, sz * (S / 2 + 0.06)]} len={2.6} m={g} r={0.035} />
-        </group>
-      ))}
+      {/* the altar overlaid with gold, its crown and horns, and two rings "by the two corners
+          thereof, upon the two sides" with their poles (Ex 30:1-5): modelled in tools/models/build.py */}
+      <Model name="incense" />
       {/* coals and sweet incense, morning and evening (Ex 30:7-8) */}
       <mesh position={[0, H + 0.02, 0]}>
         <cylinderGeometry args={[0.25, 0.25, 0.03, 12]} />
@@ -464,24 +401,10 @@ export function BronzeAltar() {
   });
   return (
     <group position={[POS.altar[0], 0, POS.altar[1]]} userData={{ feature: 'altar' }}>
-      {/* hollow with boards: four walls, open top (Ex 27:8) */}
-      <Box p={[0, H / 2, S / 2 - t / 2]} s={[S, H, t]} m={b} />
-      <Box p={[0, H / 2, -S / 2 + t / 2]} s={[S, H, t]} m={b} />
-      <Box p={[S / 2 - t / 2, H / 2, 0]} s={[t, H, S - 2 * t]} m={b} />
-      <Box p={[-S / 2 + t / 2, H / 2, 0]} s={[t, H, S - 2 * t]} m={b} />
-      {/* horns on the four corners (Ex 27:2) */}
-      {[
-        [1, 1],
-        [1, -1],
-        [-1, 1],
-        [-1, -1],
-      ].map(([sx, sz], i) => (
-        <mesh key={i} position={[sx * (S / 2 - 0.2), H + 0.18, sz * (S / 2 - 0.2)]} material={b} castShadow>
-          <coneGeometry args={[0.2, 0.42, 4]} />
-        </mesh>
-      ))}
-      {/* the ledge (compass) halfway up, and the bronze network beneath it (Ex 27:4-5) */}
-      <Frame y={H / 2} sx={S + 0.5} sz={S + 0.5} h={0.12} t={0.25} m={b} />
+      {/* hollow with boards, open at the top, with horns on the four corners, the ledge (compass)
+          halfway up, and four rings and two poles (Ex 27:1-8): modelled in tools/models/build.py */}
+      <Model name="altar" />
+      {/* the bronze network beneath the ledge (Ex 27:4-5) */}
       {[0, 1, 2, 3].map((k) => {
         const a = (k * Math.PI) / 2;
         return (
@@ -495,15 +418,6 @@ export function BronzeAltar() {
           </mesh>
         );
       })}
-      {/* four bronze rings at the corners of the net, poles on two sides (Ex 27:4, 6-7) */}
-      {[1, -1].flatMap((sz) =>
-        [1, -1].map((sx) => (
-          <Ring key={`${sx}${sz}`} p={[sx * (S / 2 - 0.3), H / 2 - 0.25, sz * (S / 2 + 0.38)]} m={b} r={0.14} />
-        )),
-      )}
-      {[1, -1].map((sz) => (
-        <Pole key={sz} p={[0, H / 2 - 0.25, sz * (S / 2 + 0.38)]} len={8} m={b} r={0.08} />
-      ))}
       {/* the inner grate with fire on it */}
       <mesh position={[0, H / 2, 0]} rotation={[-Math.PI / 2, 0, 0]} material={net}>
         <planeGeometry args={[S - 2 * t, S - 2 * t]} />

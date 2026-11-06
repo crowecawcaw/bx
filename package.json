@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "verses": "node scripts/extract-verses.mjs",
-    "check:refs": "esbuild scripts/check-refs.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/check-refs.mjs --log-level=warning && node node_modules/.cache/check-refs.mjs"
+    "check:refs": "esbuild scripts/check-refs.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/check-refs.mjs --log-level=warning && node node_modules/.cache/check-refs.mjs",
+    "models": "python3 tools/models/build.py"
   },
   "dependencies": {
     "@react-three/drei": "^9.114.0",

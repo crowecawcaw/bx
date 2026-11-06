@@ -30,6 +30,7 @@ export function make(key: string, w: number, h: number, draw: Draw, repeat?: [nu
   const ctx = c.getContext('2d', { willReadFrequently: false })!;
   draw(ctx, w, h);
   const t = new THREE.CanvasTexture(c);
+  t.name = key; // lets the preview tool find the matching bump map
   if (color) t.colorSpace = THREE.SRGBColorSpace;
   // three clamps this to the renderer's maximum
   t.anisotropy = 8;

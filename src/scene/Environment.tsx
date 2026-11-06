@@ -3,7 +3,8 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { COURT } from './dims';
-import { toon, toonRamp, windTime } from './materials';
+import { TOON, toon, windTime } from './materials';
+import { SkyLight } from './Sky';
 import { sandTexture, trodTexture } from './textures';
 
 export function SkyDome() {
@@ -117,7 +118,7 @@ function Mountains() {
   }, []);
   useLayoutEffect(() => geo.computeVertexNormals(), [geo]);
   const mat = useMemo(
-    () => new THREE.MeshToonMaterial({ gradientMap: toonRamp(), vertexColors: true }),
+    () => toon('mountains', { vertexColors: true }),
     [],
   );
   return <mesh geometry={geo} material={mat} frustumCulled={false} />;
@@ -328,17 +329,17 @@ export function Wind() {
 }
 
 export function World() {
-  const ground = useMemo(() => toon('ground', { map: sandTexture() }), []);
+  const ground = useMemo(() => toon('ground', { map: sandTexture(), color: TOON ? '#ffffff' : '#ffe0b4' }), []);
   return (
     <>
-      <SkyDome />
+      {TOON ? <SkyDome /> : <SkyLight sun={[75, 50, 42]} haze="#ecdcc0" ground="#c08850" light={0.45} />}
       <fog attach="fog" args={['#ecdcc0', 220, 1400]} />
       {/* cool sky fill, so shadows read blue-violet against the warm sun */}
-      <hemisphereLight args={['#a9b6e8', '#c49460', 1.0]} />
+      <hemisphereLight args={['#a9b6e8', '#c49460', TOON ? 1.0 : 0.45]} />
       {/* a low morning sun from the east-southeast, for long shadows */}
       <directionalLight
         position={[75, 50, 42]}
-        intensity={2.5}
+        intensity={TOON ? 2.5 : 3.1}
         color="#ffdcae"
         castShadow
         shadow-mapSize={[2048, 2048]}
