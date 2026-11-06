@@ -1,8 +1,8 @@
-import { EffectComposer, N8AO, ToneMapping } from '@react-three/postprocessing';
+import { Bloom, EffectComposer, N8AO, ToneMapping } from '@react-three/postprocessing';
 import { BlendFunction, Effect, EffectAttribute, ToneMappingMode } from 'postprocessing';
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { INK } from './materials';
+import { INK, TOON } from './materials';
 
 /**
  * Ink lines drawn from the depth buffer. On any flat surface 1/z changes linearly across the
@@ -50,7 +50,9 @@ export function Post({ quality, dpr }: { quality: number; dpr: number }) {
   if (quality === 2)
     return (
       <EffectComposer key="hi" multisampling={4} enableNormalPass={false}>
-        <N8AO halfRes quality="performance" aoRadius={3} distanceFalloff={1.2} intensity={3.4} color="#3a2a48" />
+        <N8AO halfRes quality="performance" aoRadius={3} distanceFalloff={1.2} intensity={TOON ? 3.4 : 2.6} color="#3a2a48" />
+        {/* sun glints on gold and the lamp flames bloom softly */}
+        {!TOON ? <Bloom mipmapBlur luminanceThreshold={0.95} luminanceSmoothing={0.2} intensity={0.45} radius={0.6} /> : <></>}
         <primitive object={ink} />
         {tone}
       </EffectComposer>

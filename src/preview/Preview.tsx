@@ -1,6 +1,7 @@
 /**
  * Asset preview: one model or texture on its own, with orbit controls and the scene's lighting.
  * Open with `?preview`, or link straight to an item: `?preview=model:menorah`, `?preview=tex:ashlar`.
+ * Add `&toon` to see the original cel shading.
  */
 import { OrbitControls } from '@react-three/drei';
 import { Canvas, useThree } from '@react-three/fiber';
@@ -10,7 +11,8 @@ import { Cherub } from '../scene/Cherub';
 import { Courtyard } from '../scene/Courtyard';
 import { Wind } from '../scene/Environment';
 import { Ark, BronzeAltar, IncenseAltar, Laver, Menorah, Table } from '../scene/Furniture';
-import { toon } from '../scene/materials';
+import { TOON, toon } from '../scene/materials';
+import { SkyLight } from '../scene/Sky';
 import { Post } from '../scene/Post';
 import { Tent } from '../scene/Tent';
 import * as tabTex from '../scene/textures';
@@ -119,7 +121,7 @@ function TextureMesh({ tex, shape, tiles, real }: { tex: THREE.Texture; shape: S
   const mat = useMemo(() => {
     const isBumpOnly = tex === weaveBump();
     const p = { map: isBumpOnly ? null : tex, bumpMap: isBumpOnly ? tex : bump ?? null, bumpScale: 1, side: THREE.DoubleSide };
-    // toon matches the app; standard is for judging how it would look with realistic shading
+    // the app material by default; "plain" is an untuned matte standard material, for comparison
     return real ? new THREE.MeshStandardMaterial({ ...p, roughness: 0.8 }) : toon(`preview:${tex.name || 'weave'}`, p);
   }, [tex, bump, real]);
   // show the texture at `tiles` repeats, whatever repeat the scene uses
@@ -219,8 +221,9 @@ export function Preview() {
         }}
       >
         <color attach="background" args={['#cfd6dc']} />
-        <hemisphereLight args={['#a9b6e8', '#c49460', 1.0]} />
-        <directionalLight position={sunPos} intensity={2.5} color="#ffdcae" castShadow shadow-mapSize={[2048, 2048]}
+        {!TOON && <SkyLight sun={sunPos} haze="#ecdcc0" ground="#c08850" light={0.45} background={false} />}
+        <hemisphereLight args={['#a9b6e8', '#c49460', TOON ? 1.0 : 0.45]} />
+        <directionalLight position={sunPos} intensity={TOON ? 2.5 : 3.1} color="#ffdcae" castShadow shadow-mapSize={[2048, 2048]}
           shadow-camera-left={-40} shadow-camera-right={40} shadow-camera-top={40} shadow-camera-bottom={-40} shadow-bias={-0.0005} />
         <Wind />
         <Suspense fallback={null}>
@@ -249,7 +252,7 @@ export function Preview() {
           <label><input type="checkbox" checked={ink} onChange={(e) => setInk(e.target.checked)} /> ink</label>
           <label><input type="checkbox" checked={wire} onChange={(e) => setWire(e.target.checked)} /> wire</label>
           <button onClick={() => setRefit((n) => n + 1)}>fit</button>
-          {tex && <label><input type="checkbox" checked={real} onChange={(e) => setReal(e.target.checked)} /> realistic</label>}
+          {tex && <label><input type="checkbox" checked={real} onChange={(e) => setReal(e.target.checked)} /> plain</label>}
           {tex && <label><input type="checkbox" checked={flat} onChange={(e) => setFlat(e.target.checked)} /> flat</label>}
         </div>
         {tex && (

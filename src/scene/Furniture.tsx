@@ -380,7 +380,7 @@ export function Menorah({ at = POS.menorah, rotY = -Math.PI / 2, feature = 'meno
 
 export function Smoke({ y, spread, count, color, scale = 1 }: { y: number; spread: number; count: number; color: string; scale?: number }) {
   const group = useRef<THREE.Group>(null);
-  const mat = useMemo(() => new THREE.MeshToonMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false }), [color]);
+  const mat = useMemo(() => new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false }), [color]);
   const seeds = useMemo(() => Array.from({ length: count }, (_, i) => ({ o: i / count, a: Math.random() * 6.28 })), [count]);
   useFrame(({ clock }) => {
     const g = group.current;

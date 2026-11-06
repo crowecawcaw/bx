@@ -3,7 +3,8 @@ import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { SkyDome, Wind } from '../scene/Environment';
-import { toon, toonRamp } from '../scene/materials';
+import { TOON, toon } from '../scene/materials';
+import { SkyLight } from '../scene/Sky';
 import { DEBUG } from '../scene/dims';
 import { GREAT } from './dims';
 import { hillGroundTexture, tex, terraceWallTexture } from './textures';
@@ -532,7 +533,7 @@ function detailTexture() {
  * off, and vary their crop from one step to the next.
  */
 function terrainMaterial() {
-  const m = new THREE.MeshToonMaterial({ gradientMap: toonRamp(), vertexColors: true });
+  const m = toon('t-terrain', { vertexColors: true });
   const detail = detailTexture();
   m.onBeforeCompile = (sh) => {
     sh.uniforms.detailMap = { value: detail };
@@ -1351,13 +1352,13 @@ function DebugHook() {
 export function TempleWorld() {
   return (
     <>
-      <SkyDome />
+      {TOON ? <SkyDome /> : <SkyLight sun={[240, 160, 135]} haze="#ecdcbf" ground="#c09a68" light={0.45} />}
       <fog attach="fog" args={['#ecdcbf', 380, 2400]} />
-      <hemisphereLight args={['#a9b6e8', '#c49460', 1.05]} />
+      <hemisphereLight args={['#a9b6e8', '#c49460', TOON ? 1.05 : 0.45]} />
       {/* morning sun from the east-southeast, over the Mount of Olives */}
       <directionalLight
         position={[240, 160, 135]}
-        intensity={2.5}
+        intensity={TOON ? 2.5 : 3.1}
         color="#ffdcae"
         castShadow
         shadow-mapSize={[2048, 2048]}

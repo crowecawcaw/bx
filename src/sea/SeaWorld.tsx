@@ -1,7 +1,8 @@
 import { useFrame } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { toon } from '../scene/materials';
+import { TOON, toon } from '../scene/materials';
+import { SkyLight } from '../scene/Sky';
 import { Crash } from './Crash';
 import { Crowd } from './Crowd';
 import { CLOUD_X, HALF, X1, rise, rng } from './dims';
@@ -170,7 +171,9 @@ export function SeaWorld() {
       <Sun />
       <Clouds />
       <fog attach="fog" args={[FOG_COLOR, FOG_NEAR, FOG_FAR]} />
-      <hemisphereLight args={['#ffd9a4', '#21506a', 2.2]} />
+      {/* dawn light from the east for reflections; the sea keeps its own painted sky */}
+      {!TOON && <SkyLight sun={[1, 0.08, 0.1]} haze={FOG_COLOR} ground="#3b6f80" turbidity={8} rayleigh={2.5} background={false} light={0.7} />}
+      <hemisphereLight args={['#ffd9a4', '#21506a', TOON ? 2.2 : 1.0]} />
       <directionalLight position={[0.9, 1.0, 0.25]} intensity={2.8} color="#ffd7a0" />
       <directionalLight position={[-0.6, 0.4, -1]} intensity={0.8} color="#8fd8e0" />
       <Shores />
