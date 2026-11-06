@@ -44,6 +44,8 @@ npm run build
 
 Built with React, TypeScript, Vite, three.js and @react-three/fiber. The toon shading uses `MeshToonMaterial` with a 4-step ramp and inverted-hull outlines. All textures are drawn procedurally on canvas, so there are no image assets.
 
+**Asset preview:** open `?preview` to look at one model or texture on its own, with orbit controls, the scene's lighting, ink lines, wireframe, a triangle count and a sun-angle slider. Textures can go on a sphere, box, cylinder or plane at any tiling, side by side with their colour and bump maps, and with toon or realistic shading. Link to one item directly, e.g. `?preview=model:menorah` or `?preview=tex:ashlar`. Add a model to `MODELS` in `src/preview/Preview.tsx`; textures (any `…Texture()` with no arguments) are picked up on their own.
+
 ## Deployment (GitHub Pages)
 
 - A push to `main` builds the site and publishes it to the `gh-pages` branch root (`.github/workflows/deploy.yml`).
