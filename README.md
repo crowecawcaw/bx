@@ -44,10 +44,6 @@ npm run build
 
 Built with React, TypeScript, Vite, three.js and @react-three/fiber. The toon shading uses `MeshToonMaterial` with a 4-step ramp and inverted-hull outlines. All textures are drawn procedurally on canvas, so there are no image assets.
 
-**Asset preview:** open `?preview` to look at one model or texture on its own, with orbit controls, the scene's lighting, ink lines, wireframe, a triangle count and a sun-angle slider. Textures can go on a sphere, box, cylinder or plane at any tiling, side by side with their colour and bump maps, and with toon or realistic shading. Link to one item directly, e.g. `?preview=model:menorah` or `?preview=tex:ashlar`. Add a model to `MODELS` in `src/preview/Preview.tsx`; textures (any `…Texture()` with no arguments) are picked up on their own.
-
-**Modelled shapes:** the ark, table, both altars and the court pillars and pins are shaped in Blender by a script, `tools/models/build.py`, which writes `src/models/furniture.glb` (committed, so the game needs no Blender). To change them, edit the script and run `npm run models` with Python 3.13 and `pip install bpy`. The file holds only shapes and UVs; each mesh's material is named after a game material (`gold`, `pureGold`, `bronze`, `silver`, `acacia`), and `src/scene/Model.tsx` swaps in the game's textured materials by that name.
-
 ## Deployment (GitHub Pages)
 
 - A push to `main` builds the site and publishes it to the `gh-pages` branch root (`.github/workflows/deploy.yml`).
