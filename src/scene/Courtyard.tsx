@@ -1,10 +1,10 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { useStore } from '../store';
 import { Cloth } from './Cloth';
 import { COURT } from './dims';
-import { acacia, bronze, cloth, silver } from './materials';
+import { cloth, silver } from './materials';
+import { useModel } from './Model';
 import { linenTexture, needleworkTexture } from './textures';
 
 const H = COURT.height;
@@ -47,15 +47,8 @@ function Instanced({
 export function Courtyard() {
   const gateOpen = useStore((s) => s.open.gate);
   const pillars = useMemo(courtPillars, []);
-  const geo = useMemo(
-    () => ({
-      shaft: new THREE.CylinderGeometry(0.2, 0.22, H, 10),
-      base: new RoundedBoxGeometry(0.7, 0.5, 0.7, 2, 0.06), // bronze socket (Ex 27:10)
-      cap: new THREE.CylinderGeometry(0.3, 0.24, 0.35, 10), // silver-overlaid chapiter (Ex 38:17)
-      peg: new THREE.ConeGeometry(0.06, 0.5, 5),
-    }),
-    [],
-  );
+  const pillar = useModel('courtPillar');
+  const peg = useModel('courtPeg');
 
   const linenMat = useMemo(() => {
     const t = linenTexture();
@@ -92,10 +85,13 @@ export function Courtyard() {
 
   return (
     <group userData={{ feature: 'court' }}>
-      <Instanced positions={pillars} geometry={geo.shaft} material={acacia()} y={H / 2} />
-      <Instanced positions={pillars} geometry={geo.base} material={bronze()} y={0.25} />
-      <Instanced positions={pillars} geometry={geo.cap} material={silver()} y={H + 0.1} />
-      <Instanced positions={pegs} geometry={geo.peg} material={bronze()} y={0.2} />
+      {/* acacia pillars in bronze sockets, with silver chapiters and bands (Ex 27:10-17; 38:17) */}
+      {pillar.map((p, i) => (
+        <Instanced key={i} positions={pillars} geometry={p.geometry} material={p.material} y={0} />
+      ))}
+      {peg.map((p, i) => (
+        <Instanced key={i} positions={pegs} geometry={p.geometry} material={p.material} y={0} />
+      ))}
       <lineSegments geometry={cords} raycast={() => null}>
         <lineBasicMaterial color="#8a7457" depthWrite={false} />
       </lineSegments>
