@@ -7,17 +7,21 @@ import { SITE } from '../sites';
 import { useStore } from '../store';
 import { tapToWalk, usePlayerDot } from './mapCommon';
 import { SeaMap, Walked } from './SeaMap';
+import { SecondMap } from './SecondMap';
 import { TempleMap } from './TempleMap';
 
 const FEATURES = SITE.features;
 const GENERAL = SITE.general;
 const TEMPLE = SITE.id === 'temple';
 const SEA = SITE.id === 'sea';
+const SECOND = SITE.id === 'second';
 const OTHERS: [SiteId, string][] = (
   [
     ['tabernacle', 'Visit the tabernacle ›'],
     ['temple', "Visit Solomon's Temple ›"],
+    ['second', 'Visit the second temple ›'],
     ['sea', 'Cross the Red Sea ›'],
+    ['compare', 'See all three side by side ›'],
   ] as [SiteId, string][]
 ).filter(([id]) => id !== SITE_ID);
 
@@ -137,7 +141,7 @@ function ScripturePanel() {
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={SEA ? 'e.g. Exodus 14:21-22' : TEMPLE ? 'e.g. 1 Kings 6:23-28' : 'e.g. Exodus 26:31-33'}
+          placeholder={SEA ? 'e.g. Exodus 14:21-22' : TEMPLE ? 'e.g. 1 Kings 6:23-28' : SECOND ? 'e.g. John 2:13-21' : 'e.g. Exodus 26:31-33'}
           aria-label="Bible reference"
           enterKeyHint="search"
         />
@@ -180,6 +184,11 @@ function Help() {
         <p>
           Walk with the multitude toward the far shore. The seabed rises as you near it. See what happens when you climb
           above the level of the sea (Ex 14:26-28).
+        </p>
+      ) : SECOND ? (
+        <p>
+          <b>Tap a door</b> when you are close to open or close it: the Nicanor gate at the top of the fifteen steps,
+          the golden doors of the Holy Place, and the two curtains of the veil.
         </p>
       ) : TEMPLE ? (
         <p>
@@ -324,7 +333,7 @@ export function Ui() {
           </button>
         </nav>
       </div>
-      {map && (SEA ? <SeaMap /> : TEMPLE ? <TempleMap /> : <TabernacleMap />)}
+      {map && (SEA ? <SeaMap /> : TEMPLE ? <TempleMap /> : SECOND ? <SecondMap /> : <TabernacleMap />)}
       {toast && <div className="toast">{toast}</div>}
       <InfoPanel />
       <SidePanel />

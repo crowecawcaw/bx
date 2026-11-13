@@ -1,6 +1,6 @@
 # Tabernacle Explorer
 
-Walk through the Old Testament tabernacle in 3D, built to the measurements in Exodus 25–40, or through Solomon's Temple (`?site=temple`), built to 1 Kings 6–8 and 2 Chronicles 3–5, or cross the Red Sea (`?site=sea`, Exodus 14). It runs in a phone or desktop browser. The intro screen switches between the three.
+Walk through the Old Testament tabernacle in 3D, built to the measurements in Exodus 25–40, or through Solomon's Temple (`?site=temple`), built to 1 Kings 6–8 and 2 Chronicles 3–5, or the second temple as Herod rebuilt it (`?site=second`), or cross the Red Sea (`?site=sea`, Exodus 14). **Side by side** (`?site=compare`) shows the tabernacle and both temples together at one scale, and the camera flies around them. It runs in a phone or desktop browser. The intro screen switches between them.
 
 - **Tap** the ground to walk there (pathfinding goes around walls). **Double-tap** to jump there. **Drag** to look around. **WASD** or the arrow keys also work.
 - **Tap a curtain** when you are close to draw it aside: the court gate, the door of the tent, or the veil.
@@ -25,6 +25,21 @@ Scripture text is the King James Version (public domain), from [thiagobodruk/bib
 Open with `?site=temple`. The house is 60 × 20 × 30 cubits with a 20-cubit cube for the oracle. The porch is 120 cubits high, as written in 2 Chr 3:4. The side chambers are 5, 6 and 7 cubits wide on narrowed rests. Jachin and Boaz have 400 pomegranates and seven chain wreaths each. The molten sea stands on twelve oxen with 300 knops to a row. Also modeled: the ten wheeled bases and lavers, the 20 × 20 × 10 bronze altar, the ten lampstands and ten tables, the golden altar, the doors of olive wood and fir, the chains of gold, the veil, and the two 10-cubit cherubim whose wings reach from wall to wall. All of it is listed in `src/data/templeSpecs.ts`.
 
 Where Scripture is silent (wall thickness, the size of the courts, door heights, the altar's ramp) or the accounts differ (2,000 or 3,000 baths, one table or ten), the info panel says what the model chose and why.
+
+## The Second Temple
+
+Open with `?site=second`. This is the house of the Gospels and Acts: Zerubbabel's temple (Ezra 3–6; Haggai 2) as Herod rebuilt it, "forty and six years in building" (John 2:20). Scripture gives only the 60 × 60 cubits of Cyrus's decree (Ezra 6:3), so the plan follows the Mishnah tractate Middot, with Josephus where Middot is silent. Each info panel says which.
+
+- **The mount** is 500 cubits square (Middot 2:1), with double porticoes on three sides (Solomon's Porch on the east, John 10:23; Acts 3:11), the Royal Stoa on the south, and the fortress Antonia at the north-west corner (Acts 21:34-40).
+- **The soreg** is the low lattice that Gentiles could not pass (Acts 21:28; Eph 2:14). Inside it, the chel and twelve steps lead up to the Court of the Women (135 × 135, with its four corner chambers and the treasury chests of Mark 12:41). The Beautiful gate of Acts 3:2 is shown as its east gate.
+- **The fifteen curved steps** go up to the Nicanor gate and the Court of Israel, 2½ cubits below the Court of the Priests. Then come the altar of unhewn stone (32 square, with its ramp, horns and red line), the laver with twelve spigots, and the place of slaughtering.
+- **The house** is 100 × 100 × 100 with a porch 100 broad, a front overlaid with gold, golden spikes on the roof and the golden vine over the door. It is entered by twelve steps. Inside are the Holy Place (40 × 20 × 40) with one lampstand, one table and the golden altar, and **two curtains a cubit apart** (Matt 27:51; Mishnah Yoma 5:1). The empty Most Holy Place holds only the foundation stone.
+
+It stands in the same Jerusalem landscape as Solomon's Temple, on Herod's larger platform. Tap the Nicanor gate, the doors of the Holy Place, or the veil to open them. The code is in `src/second/`, and the verses and notes are in `src/data/secondSpecs.ts`.
+
+## Side by side
+
+Open with `?site=compare`. The tabernacle, Solomon's Temple and the second temple stand in a row, facing east, with their Most Holy Places on one north–south line. One world unit is one cubit for all three. The camera circles them on its own. Drag to turn, pinch or scroll to zoom, or tap a name to fly to it. **Houses only** hides the courts and slides the three houses together. **Facts** shows a table of their measurements, with the verses. The code is in `src/compare/`.
 
 ## The Red Sea
 

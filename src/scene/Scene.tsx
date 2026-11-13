@@ -1,8 +1,10 @@
 import { Html, PerformanceMonitor } from '@react-three/drei';
 import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
+import { CompareWorld } from '../compare/CompareScene';
 import { Sea } from '../sea/Sea';
+import { SecondTemple } from '../second/SecondTemple';
 import { SeaWorld } from '../sea/SeaWorld';
 import { SITE } from '../sites';
 import { useStore, type CurtainId } from '../store';
@@ -23,6 +25,8 @@ const CURTAIN_REACH = SITE.reach;
 const FEATURES = SITE.features;
 const TEMPLE = SITE.id === 'temple';
 const SEA = SITE.id === 'sea';
+const SECOND = SITE.id === 'second';
+const COMPARE = SITE.id === 'compare';
 
 function tagOf(o: THREE.Object3D | null) {
   let curtain: CurtainId | undefined;
@@ -178,9 +182,25 @@ export function Scene() {
         onFallback={() => setStep(0)}
       />
       <ShadowWarmup />
+      {COMPARE ? (
+        <Suspense fallback={null}>
+          <CompareWorld />
+          {POST && <Post quality={STEPS[step][1]} dpr={dpr} />}
+        </Suspense>
+      ) : (
+        <Walk post={POST ? <Post quality={STEPS[step][1]} dpr={dpr} /> : null} />
+      )}
+    </Canvas>
+  );
+}
+
+/** A site you walk through: its world, the parts you can tap, the info bubbles and the player. */
+function Walk({ post }: { post: ReactNode }) {
+  return (
+    <>
       <DoubleTap />
       <Suspense fallback={null}>
-        <group raycast={() => null}>{SEA ? <SeaWorld /> : TEMPLE ? <TempleWorld /> : <World />}</group>
+        <group raycast={() => null}>{SEA ? <SeaWorld /> : TEMPLE || SECOND ? <TempleWorld /> : <World />}</group>
         <group onClick={onTap}>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]} visible={false} userData={{ ground: true }}>
             <planeGeometry args={[1000, 1000]} />
@@ -189,6 +209,8 @@ export function Scene() {
             <Sea />
           ) : TEMPLE ? (
             <Temple />
+          ) : SECOND ? (
+            <SecondTemple />
           ) : (
             <>
               <Courtyard />
@@ -204,8 +226,8 @@ export function Scene() {
         </group>
         <Bubbles />
         <Player />
-        {POST && <Post quality={STEPS[step][1]} dpr={dpr} />}
+        {post}
       </Suspense>
-    </Canvas>
+    </>
   );
 }

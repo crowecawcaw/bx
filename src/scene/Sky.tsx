@@ -9,6 +9,7 @@ import { player } from './Player';
 const INDOOR: Record<string, string[]> = {
   tabernacle: ['holy', 'holiest'],
   temple: ['holy', 'oracle', 'chambers'],
+  second: ['holy', 'holiest'],
   sea: [],
 };
 

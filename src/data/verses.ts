@@ -14,6 +14,14 @@ const ALIASES: Record<string, string> = {
   jer: 'Jeremiah', jeremiah: 'Jeremiah',
   ps: 'Psalms', psa: 'Psalms', psalm: 'Psalms', psalms: 'Psalms',
   heb: 'Hebrews', hebrews: 'Hebrews',
+  ezr: 'Ezra', ezra: 'Ezra',
+  hag: 'Haggai', haggai: 'Haggai',
+  mt: 'Matthew', matt: 'Matthew', matthew: 'Matthew',
+  mk: 'Mark', mark: 'Mark',
+  lk: 'Luke', luke: 'Luke',
+  jn: 'John', john: 'John',
+  ac: 'Acts', acts: 'Acts',
+  eph: 'Ephesians', ephesians: 'Ephesians',
 };
 
 const SHORT: Record<string, string> = {
@@ -27,6 +35,14 @@ const SHORT: Record<string, string> = {
   Jeremiah: 'Jer',
   Psalms: 'Ps',
   Hebrews: 'Heb',
+  Ezra: 'Ezra',
+  Haggai: 'Hag',
+  Matthew: 'Matt',
+  Mark: 'Mark',
+  Luke: 'Luke',
+  John: 'John',
+  Acts: 'Acts',
+  Ephesians: 'Eph',
 };
 
 /** "2 Chronicles 3:4" → "2 Chr 3:4" */

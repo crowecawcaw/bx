@@ -6,6 +6,8 @@ import { SkyDome, Wind } from '../scene/Environment';
 import { TOON, toon } from '../scene/materials';
 import { SkyLight } from '../scene/Sky';
 import { DEBUG } from '../scene/dims';
+import { ANTONIA, MOUNT } from '../second/dims';
+import { SITE } from '../sites';
 import { GREAT } from './dims';
 import { hillGroundTexture, tex, terraceWallTexture } from './textures';
 
@@ -23,16 +25,24 @@ import { hillGroundTexture, tex, terraceWallTexture } from './textures';
  * Everything sits on one heightfield (cubits, y = 0 at the court floor), so houses and trees stand
  * on the ground that's drawn. Horizontal distances are a little compressed so the far hills fit
  * inside the fog.
+ *
+ * The second temple (?site=second) stands in the same landscape, on Herod's larger platform, with
+ * the fortress Antonia at its north-west corner and the city crowding up to its south wall.
  */
+const SECOND = SITE.id === 'second';
 
 type Rect = { x0: number; x1: number; z0: number; z1: number; top: number };
 
 /** The courts' terrace. Its top sits a little below the pavement (y = 0.01) so the two never fight. */
-const PLATFORM: Rect = { x0: GREAT.minX - 8, x1: GREAT.maxX + 8, z0: GREAT.minZ - 8, z1: GREAT.maxZ + 8, top: -0.3 };
+const PLATFORM: Rect = SECOND
+  ? { x0: MOUNT.minX, x1: MOUNT.maxX, z0: MOUNT.minZ, z1: MOUNT.maxZ, top: -0.3 }
+  : { x0: GREAT.minX - 8, x1: GREAT.maxX + 8, z0: GREAT.minZ - 8, z1: GREAT.maxZ + 8, top: -0.3 };
+/** The rock the Antonia stands on. */
+const ANTONIA_ROCK: Rect = { x0: ANTONIA.minX - 6, x1: ANTONIA.maxX + 6, z0: ANTONIA.minZ - 6, z1: ANTONIA.maxZ, top: -0.3 };
 /** Solomon's palace on two terraces stepping down south of the courts. */
 const PALACE_HI: Rect = { x0: -120, x1: 215, z0: PLATFORM.z1, z1: 290, top: -12 };
 const PALACE_LO: Rect = { x0: -90, x1: 205, z0: 290, z1: 440, top: -28 };
-const TERRACES = [PLATFORM, PALACE_HI, PALACE_LO];
+const TERRACES = SECOND ? [PLATFORM, ANTONIA_ROCK] : [PLATFORM, PALACE_HI, PALACE_LO];
 
 /** [x, z, bed height]; w is the width of the slopes, wEast that of the eastern slope if different. */
 type Valley = { p: [number, number, number][]; floor: number; w: number; wEast?: number };
@@ -54,10 +64,14 @@ const HINNOM: Valley = {
 };
 
 /** City of David's wall, from the south-east corner of the courts round the spur to the south-west corner. */
-const WALL: [number, number][] = [
+const SOLOMON_WALL: [number, number][] = [
   [248, 126], [262, 260], [288, 420], [318, 560], [322, 700], [300, 860], [262, 1010], [205, 1130],
   [130, 1185], [60, 1150], [10, 1040], [-40, 880], [-80, 700], [-120, 520], [-150, 380], [-166, 250], [-166, 126],
 ];
+/** For Herod's platform, the same wall, starting from the platform's southern corners. */
+const WALL: [number, number][] = SECOND
+  ? [[PLATFORM.x1 + 6, PLATFORM.z1 + 6], ...SOLOMON_WALL.filter(([, z]) => z > PLATFORM.z1 + 60), [PLATFORM.x0 - 6, PLATFORM.z1 + 6]]
+  : SOLOMON_WALL;
 const CITY: [number, number][] = [...WALL, [PLATFORM.x0, PLATFORM.z1], [PLATFORM.x1, PLATFORM.z1]];
 
 const smooth = (a: number, b: number, x: number) => {
@@ -775,7 +789,7 @@ function wallBoxes(at: (x: number, z: number) => number): Box[] {
 function Built() {
   const geo = useMemo(() => {
     const { at } = terrain();
-    return boxesGeometry([...palaceBoxes(), ...footingBoxes(), ...wallBoxes(at)]);
+    return boxesGeometry(SECOND ? wallBoxes(at) : [...palaceBoxes(), ...footingBoxes(), ...wallBoxes(at)]);
   }, []);
   const mat = useMemo(() => toon('t-built', { color: '#ffffff', vertexColors: true }), []);
   return <mesh geometry={geo} material={mat} castShadow receiveShadow />;
@@ -1361,13 +1375,13 @@ export function TempleWorld() {
         intensity={TOON ? 2.5 : 3.1}
         color="#ffdcae"
         castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-150}
-        shadow-camera-right={150}
-        shadow-camera-top={110}
-        shadow-camera-bottom={-110}
-        shadow-camera-near={50}
-        shadow-camera-far={800}
+        shadow-mapSize={SECOND ? [4096, 4096] : [2048, 2048]}
+        shadow-camera-left={SECOND ? -310 : -150}
+        shadow-camera-right={SECOND ? 310 : 150}
+        shadow-camera-top={SECOND ? 310 : 110}
+        shadow-camera-bottom={SECOND ? -310 : -110}
+        shadow-camera-near={SECOND ? 10 : 50}
+        shadow-camera-far={SECOND ? 1000 : 800}
         shadow-bias={-0.0006}
         shadow-normalBias={0.06}
       />

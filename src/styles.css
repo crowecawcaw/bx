@@ -204,3 +204,40 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .pv-flat figure { margin: 0; max-width: 100%; background: #fff; border: 2px solid #1d140d; border-radius: 8px; padding: 4px; }
 .pv-flat img { display: block; max-height: 160px; max-width: 100%; image-rendering: pixelated; }
 .pv-flat figcaption { font-size: 12px; text-align: center; }
+
+/* Second temple map */
+.minimap.second { width: min(50vw, 250px); background: rgba(201, 169, 130, 0.92); }
+.mm-mount { fill: #d8c9a6; stroke: var(--ink); stroke-width: 2; }
+.mm-portico { fill: #bfae8a; }
+.mm-soreg { fill: none; stroke: var(--ink); stroke-width: 1.2; stroke-dasharray: 4 3; }
+.mm-chel { fill: #e6dbc3; stroke: var(--ink); stroke-width: 1; }
+.minimap.second .mm-court { fill: #ece3cf; stroke-width: 1.6; }
+.minimap.second .mm-gate { stroke-width: 6; }
+.minimap.second .mm-veil { stroke-width: 2.4; }
+.minimap.second .mm-label.big { font-size: 22px; }
+
+/* Side by side (?site=compare) */
+.cmp-focus {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 14px);
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100vw - 24px);
+}
+.cmp-focus button {
+  height: 40px; padding: 0 14px; border-radius: 999px; border: 2px solid var(--ink);
+  background: rgba(251, 245, 232, 0.92); box-shadow: var(--shadow); font-weight: 700; font-size: 14px;
+}
+.cmp-focus button.on { background: var(--gold); color: #fff; }
+.cmp-label {
+  pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 1px; white-space: nowrap;
+  background: rgba(251, 245, 232, 0.92); border: 2px solid var(--ink); border-radius: 10px; padding: 4px 10px;
+  box-shadow: var(--shadow); font-size: 14px; line-height: 1.2;
+}
+.cmp-label span { font-size: 11.5px; color: var(--muted); }
+.cmp-label.on { background: #f4dc9a; }
+.cmp-facts { width: min(640px, calc(100vw - 24px)); }
+.cmp-passage { z-index: 31; }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.35; }
+.cmp-table th, .cmp-table td { text-align: left; vertical-align: top; padding: 6px 5px; border-bottom: 1px dashed #e2d6bd; }
+.cmp-table thead th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); border-bottom: 2px solid var(--paper-2); }
+.cmp-table tbody th { font-size: 12.5px; color: var(--purple); width: 18%; }
+.cmp-table .ref { font-size: 11px; padding: 0 6px; margin-top: 2px; }
+@media (max-width: 640px) { .cmp-table { font-size: 12px; } .cmp-table th, .cmp-table td { padding: 5px 3px; } }
