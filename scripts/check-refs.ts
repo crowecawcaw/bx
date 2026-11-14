@@ -1,6 +1,8 @@
 // Verifies every reference in the requirement data resolves to bundled KJV text.
 import { FEATURES, GENERAL, type Feature, type Requirement } from '../src/data/specs';
 import { SEA_FEATURES, SEA_GENERAL } from '../src/data/seaSpecs';
+import { EZEKIEL_FEATURES, EZEKIEL_GENERAL } from '../src/data/ezekielSpecs';
+import { SECOND_FEATURES, SECOND_GENERAL } from '../src/data/secondSpecs';
 import { TEMPLE_FEATURES, TEMPLE_GENERAL } from '../src/data/templeSpecs';
 import { lookup } from '../src/data/verses';
 
@@ -8,6 +10,8 @@ let failed = false;
 for (const [name, features, general] of [
   ['Tabernacle', FEATURES, GENERAL],
   ['Temple', TEMPLE_FEATURES, TEMPLE_GENERAL],
+  ['Second Temple', SECOND_FEATURES, SECOND_GENERAL],
+  ['Ezekiel’s Temple', EZEKIEL_FEATURES, EZEKIEL_GENERAL],
   ['Red Sea', SEA_FEATURES, SEA_GENERAL],
 ] as [string, Feature[], Requirement[]][]) {
   const refs = [...general.map((r) => r.ref), ...features.flatMap((f) => [...f.requirements.map((r) => r.ref), ...f.refs])];

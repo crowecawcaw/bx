@@ -14,9 +14,23 @@ const WANT = {
   '2 Kings': [25],
   '1 Chronicles': [28],
   '2 Chronicles': [2, 3, 4, 5, 7],
+  // the second temple: rebuilt after the exile (Ezra, Haggai), and Herod's house in the Gospels and Acts
+  Ezra: [1, 3, 5, 6],
+  Psalms: [46, 77, 106],
   Jeremiah: [52],
-  Psalms: [77, 106],
-  Hebrews: [9, 11],
+  // the temple of Ezekiel's vision, and the passages that take up its river and city
+  Ezekiel: [10, 11, 37, 40, 41, 42, 43, 44, 45, 46, 47, 48],
+  Joel: [3],
+  Haggai: [2],
+  Zechariah: [14],
+  Matthew: [4, 21, 23, 24, 27],
+  Mark: [11, 12, 13, 15],
+  Luke: [1, 2, 18, 21, 23],
+  John: [2, 7, 8, 10],
+  Acts: [3, 5, 21],
+  Ephesians: [2],
+  Hebrews: [9, 10, 11],
+  Revelation: [21, 22],
 };
 
 const text = process.argv[2]

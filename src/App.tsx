@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CompareUi } from './compare/CompareUi';
 import { Scene } from './scene/Scene';
 import { SITE_ID, siteHref, type SiteId } from './site';
 import { Ui } from './ui/Ui';
@@ -6,7 +7,10 @@ import { Ui } from './ui/Ui';
 const TABS: [SiteId, string][] = [
   ['tabernacle', 'Tabernacle'],
   ['temple', 'Solomon’s Temple'],
+  ['second', 'Second Temple'],
+  ['ezekiel', 'Ezekiel’s Temple'],
   ['sea', 'Red Sea'],
+  ['compare', 'Side by side'],
 ];
 
 function Tabs() {
@@ -71,6 +75,77 @@ function TempleIntro() {
   );
 }
 
+function SecondIntro() {
+  return (
+    <>
+      <h1>The Second Temple</h1>
+      <p className="verse">
+        “The glory of this latter house shall be greater than of the former, saith the LORD of hosts.”
+        <br />
+        <span>Haggai 2:9</span>
+      </p>
+      <p>
+        Walk the temple Jesus knew: Solomon’s Porch and the Court of the Gentiles, past the soreg into the Court of the
+        Women, up the fifteen steps to the altar, and into the Holy Place. Built to the measurements of the Mishnah.
+      </p>
+      <ul>
+        <li>Tap the ground to walk · drag to look</li>
+        <li>Tap the gate, the doors and the veil to open them</li>
+        <li>Tap the info bubbles for verses and details</li>
+      </ul>
+      <button className="primary">Enter the temple mount</button>
+    </>
+  );
+}
+
+function EzekielIntro() {
+  return (
+    <>
+      <h1>Ezekiel’s Temple</h1>
+      <p className="verse">
+        “Son of man, behold with thine eyes, and hear with thine ears, and set thine heart upon all that I shall shew
+        thee.”
+        <br />
+        <span>Ezekiel 40:4</span>
+      </p>
+      <p>
+        Walk the temple Ezekiel saw in vision on a very high mountain: the gates and courts, the altar, the house
+        where the glory returned, and the river that flows from under its threshold. Built to the measurements of
+        Ezekiel 40–48. It was never built, and the info panels set out how it has been read.
+      </p>
+      <ul>
+        <li>Tap the ground to walk · drag to look</li>
+        <li>Tap the inner east gate and the doors of the house to open them</li>
+        <li>Tap the info bubbles for verses and details</li>
+      </ul>
+      <button className="primary">Enter by the east gate</button>
+    </>
+  );
+}
+
+function CompareIntro() {
+  return (
+    <>
+      <h1>Side by side</h1>
+      <p className="verse">
+        “Who is left among you that saw this house in her first glory? and how do ye see it now?”
+        <br />
+        <span>Haggai 2:3</span>
+      </p>
+      <p>
+        The tabernacle, Solomon’s Temple, the second temple and the temple of Ezekiel’s vision at the same scale, facing
+        east with their Most Holy Places in a line. The camera flies around them.
+      </p>
+      <ul>
+        <li>Drag to turn · pinch or scroll to zoom · two fingers to pan</li>
+        <li>Tap a name to fly to it; “Houses only” sets the houses together</li>
+        <li>“Facts” compares their measurements, with the verses</li>
+      </ul>
+      <button className="primary">Fly around</button>
+    </>
+  );
+}
+
 function SeaIntro() {
   return (
     <>
@@ -95,14 +170,14 @@ function SeaIntro() {
   );
 }
 
-const INTRO = { tabernacle: TabernacleIntro, temple: TempleIntro, sea: SeaIntro }[SITE_ID];
+const INTRO = { tabernacle: TabernacleIntro, temple: TempleIntro, second: SecondIntro, ezekiel: EzekielIntro, sea: SeaIntro, compare: CompareIntro }[SITE_ID];
 
 export function App() {
   const [entered, setEntered] = useState(false);
   return (
     <>
       <Scene />
-      <Ui />
+      {SITE_ID === 'compare' ? <CompareUi /> : <Ui />}
       {!entered && (
         <div className="intro" onClick={() => setEntered(true)}>
           <div className="intro-card">

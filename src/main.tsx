@@ -4,7 +4,14 @@ import { App } from './App';
 import { SITE } from './sites';
 import './styles.css';
 
-document.title = { tabernacle: 'Tabernacle Explorer', temple: 'Temple Explorer', sea: 'The Red Sea Crossing' }[SITE.id];
+document.title = {
+  tabernacle: 'Tabernacle Explorer',
+  temple: 'Temple Explorer',
+  second: 'Second Temple Explorer',
+  ezekiel: 'Ezekiel’s Temple Explorer',
+  sea: 'The Red Sea Crossing',
+  compare: 'Tabernacle and Temples Compared',
+}[SITE.id];
 
 const root = createRoot(document.getElementById('root')!);
 if (new URLSearchParams(location.search).has('preview')) {

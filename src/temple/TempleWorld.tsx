@@ -6,6 +6,8 @@ import { SkyDome, Wind } from '../scene/Environment';
 import { TOON, toon } from '../scene/materials';
 import { SkyLight } from '../scene/Sky';
 import { DEBUG } from '../scene/dims';
+import { ANTONIA, MOUNT } from '../second/dims';
+import { SITE } from '../sites';
 import { GREAT } from './dims';
 import { hillGroundTexture, tex, terraceWallTexture } from './textures';
 
@@ -23,16 +25,24 @@ import { hillGroundTexture, tex, terraceWallTexture } from './textures';
  * Everything sits on one heightfield (cubits, y = 0 at the court floor), so houses and trees stand
  * on the ground that's drawn. Horizontal distances are a little compressed so the far hills fit
  * inside the fog.
+ *
+ * The second temple (?site=second) stands in the same landscape, on Herod's larger platform, with
+ * the fortress Antonia at its north-west corner and the city crowding up to its south wall.
  */
+const SECOND = SITE.id === 'second';
 
 type Rect = { x0: number; x1: number; z0: number; z1: number; top: number };
 
 /** The courts' terrace. Its top sits a little below the pavement (y = 0.01) so the two never fight. */
-const PLATFORM: Rect = { x0: GREAT.minX - 8, x1: GREAT.maxX + 8, z0: GREAT.minZ - 8, z1: GREAT.maxZ + 8, top: -0.3 };
+const PLATFORM: Rect = SECOND
+  ? { x0: MOUNT.minX, x1: MOUNT.maxX, z0: MOUNT.minZ, z1: MOUNT.maxZ, top: -0.3 }
+  : { x0: GREAT.minX - 8, x1: GREAT.maxX + 8, z0: GREAT.minZ - 8, z1: GREAT.maxZ + 8, top: -0.3 };
+/** The rock the Antonia stands on. */
+const ANTONIA_ROCK: Rect = { x0: ANTONIA.minX - 6, x1: ANTONIA.maxX + 6, z0: ANTONIA.minZ - 6, z1: ANTONIA.maxZ, top: -0.3 };
 /** Solomon's palace on two terraces stepping down south of the courts. */
 const PALACE_HI: Rect = { x0: -120, x1: 215, z0: PLATFORM.z1, z1: 290, top: -12 };
 const PALACE_LO: Rect = { x0: -90, x1: 205, z0: 290, z1: 440, top: -28 };
-const TERRACES = [PLATFORM, PALACE_HI, PALACE_LO];
+const TERRACES = SECOND ? [PLATFORM, ANTONIA_ROCK] : [PLATFORM, PALACE_HI, PALACE_LO];
 
 /** [x, z, bed height]; w is the width of the slopes, wEast that of the eastern slope if different. */
 type Valley = { p: [number, number, number][]; floor: number; w: number; wEast?: number };
@@ -54,13 +64,17 @@ const HINNOM: Valley = {
 };
 
 /** City of David's wall, from the south-east corner of the courts round the spur to the south-west corner. */
-const WALL: [number, number][] = [
+const SOLOMON_WALL: [number, number][] = [
   [248, 126], [262, 260], [288, 420], [318, 560], [322, 700], [300, 860], [262, 1010], [205, 1130],
   [130, 1185], [60, 1150], [10, 1040], [-40, 880], [-80, 700], [-120, 520], [-150, 380], [-166, 250], [-166, 126],
 ];
+/** For Herod's platform, the same wall, starting from the platform's southern corners. */
+const WALL: [number, number][] = SECOND
+  ? [[PLATFORM.x1 + 6, PLATFORM.z1 + 6], ...SOLOMON_WALL.filter(([, z]) => z > PLATFORM.z1 + 60), [PLATFORM.x0 - 6, PLATFORM.z1 + 6]]
+  : SOLOMON_WALL;
 const CITY: [number, number][] = [...WALL, [PLATFORM.x0, PLATFORM.z1], [PLATFORM.x1, PLATFORM.z1]];
 
-const smooth = (a: number, b: number, x: number) => {
+export const smooth = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
@@ -70,7 +84,7 @@ const gauss = (x: number, z: number, cx: number, cz: number, sx: number, sz: num
 
 // Smooth value noise for the ground's knolls, patches and mottling.
 /** Integer hashes of (truncated) lattice coordinates, 0..1. */
-function hash2(x: number, y: number) {
+export function hash2(x: number, y: number) {
   let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263)) | 0;
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
@@ -80,7 +94,7 @@ function hash3(x: number, y: number, z: number) {
   h = Math.imul(h ^ (h >>> 13), 1274126177);
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
-function vnoise(x: number, y: number) {
+export function vnoise(x: number, y: number) {
   const ix = Math.floor(x);
   const iy = Math.floor(y);
   const fx = x - ix;
@@ -94,7 +108,7 @@ function vnoise(x: number, y: number) {
   return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
 }
 /** Fractal value noise, 0..1 (mostly 0.25..0.75). */
-function fbm(x: number, y: number, oct = 3) {
+export function fbm(x: number, y: number, oct = 3) {
   let s = 0;
   let a = 0.5;
   let n = 0;
@@ -109,7 +123,7 @@ function fbm(x: number, y: number, oct = 3) {
 }
 
 /** Ridged fractal noise: sharp crests, broad valleys. 0..1 */
-function ridged(x: number, y: number) {
+export function ridged(x: number, y: number) {
   let sum = 0;
   let amp = 0.5;
   let norm = 0;
@@ -296,7 +310,7 @@ const terrField = (x: number, z: number) => smooth(0.46, 0.58, fbm(x / 320 + 7.7
 // the western hill, the city) and coarsens toward the horizon.
 
 /** Grid lines: evenly `cell` apart over [f0, f1], growing by `grow` per cell out to [lo, hi]. */
-function axis(lo: number, hi: number, f0: number, f1: number, cell: number, grow: number) {
+export function axis(lo: number, hi: number, f0: number, f1: number, cell: number, grow: number) {
   const out: number[] = [];
   const n = Math.round((f1 - f0) / cell);
   for (let i = 0; i <= n; i++) out.push(f0 + ((f1 - f0) * i) / n);
@@ -313,7 +327,7 @@ function axis(lo: number, hi: number, f0: number, f1: number, cell: number, grow
   return Float32Array.from(out);
 }
 
-function seek(a: Float32Array, v: number) {
+export function seek(a: Float32Array, v: number) {
   let lo = 0;
   let hi = a.length - 1;
   if (v <= a[0]) return 0;
@@ -532,7 +546,7 @@ function detailTexture() {
  * breaks up the toon bands, and terraces of dry-stone walls that wander off the contours, break
  * off, and vary their crop from one step to the next.
  */
-function terrainMaterial() {
+export function terrainMaterial() {
   const m = toon('t-terrain', { vertexColors: true });
   const detail = detailTexture();
   m.onBeforeCompile = (sh) => {
@@ -775,7 +789,7 @@ function wallBoxes(at: (x: number, z: number) => number): Box[] {
 function Built() {
   const geo = useMemo(() => {
     const { at } = terrain();
-    return boxesGeometry([...palaceBoxes(), ...footingBoxes(), ...wallBoxes(at)]);
+    return boxesGeometry(SECOND ? wallBoxes(at) : [...palaceBoxes(), ...footingBoxes(), ...wallBoxes(at)]);
   }, []);
   const mat = useMemo(() => toon('t-built', { color: '#ffffff', vertexColors: true }), []);
   return <mesh geometry={geo} material={mat} castShadow receiveShadow />;
@@ -786,7 +800,7 @@ function Built() {
 // its shape varied per instance by scale, lean and turn, and its colour by instance colour
 // multiplying the shading baked into the vertex colours.
 
-function instanced(geo: THREE.BufferGeometry, mat: THREE.Material, mats: THREE.Matrix4[], cols?: THREE.Color[]) {
+export function instanced(geo: THREE.BufferGeometry, mat: THREE.Material, mats: THREE.Matrix4[], cols?: THREE.Color[]) {
   const m = new THREE.InstancedMesh(geo, mat, Math.max(1, mats.length));
   m.count = mats.length;
   mats.forEach((x, i) => m.setMatrixAt(i, x));
@@ -810,7 +824,7 @@ function withColor(g: THREE.BufferGeometry, f: (x: number, y: number, z: number)
  * A flat-roofed house in a unit box (footprint ±0.5, y 0..1): walls, a parapet round the roof
  * (Deut 22:8), and the roof of beaten earth sunk inside it. 26 triangles.
  */
-function houseGeometry() {
+export function houseGeometry() {
   const P: number[] = [];
   const C: number[] = [];
   const quad = (v: number[][], c: number[]) => {
@@ -1013,7 +1027,7 @@ function limb(a: number[], b: number[], r0: number, r1: number, c: [number, numb
 const BARK: [number, number, number] = [0.62, 0.52, 0.5];
 
 /** Olive: a short leaning trunk under a broad, flattened, lumpy crown. 68 triangles. */
-function oliveGeometry() {
+export function oliveGeometry() {
   return mergeGeometries([
     limb([0, 0, 0], [0.7, 2.6, 0.35], 0.6, 0.35, BARK),
     ...lobes(
@@ -1030,7 +1044,7 @@ function oliveGeometry() {
 }
 
 /** Terebinth, oak or fig: a sturdier trunk and a rounder, taller crown. */
-function broadleafGeometry() {
+export function broadleafGeometry() {
   return mergeGeometries([
     limb([0, 0, 0], [0.3, 3.4, 0.2], 0.75, 0.45, BARK),
     ...lobes(
@@ -1049,7 +1063,7 @@ function broadleafGeometry() {
 }
 
 /** Cypress: a dark, slightly ragged spindle. */
-function cypressGeometry() {
+export function cypressGeometry() {
   const prof = [[0.3, 0], [1.1, 1.0], [1.45, 3.6], [1.3, 7.5], [0.9, 11.0], [0.4, 13.8], [0.02, 15.2]].map(([r, y]) => new THREE.Vector2(r, y));
   const g = new THREE.LatheGeometry(prof, 5).toNonIndexed();
   g.deleteAttribute('uv');
@@ -1068,7 +1082,7 @@ function cypressGeometry() {
 }
 
 /** A low bush of thorny scrub. 8 triangles. */
-function scrubGeometry() {
+export function scrubGeometry() {
   return mergeGeometries(
     lobes(
       [
@@ -1087,7 +1101,7 @@ function scrubGeometry() {
  * A patch of olive grove for the further slopes: eight crowns, some run together, on a local
  * ground plane that the instance matrix shears to the slope. 64 triangles.
  */
-function clumpGeometry() {
+export function clumpGeometry() {
   return mergeGeometries(
     lobes(
       [
@@ -1110,7 +1124,7 @@ function clumpGeometry() {
 }
 
 /** A boulder: a craggy, flat-faceted lump. */
-function rockGeometry() {
+export function rockGeometry() {
   const g = new THREE.IcosahedronGeometry(1, 0);
   g.deleteAttribute('uv');
   const p = g.attributes.position;
@@ -1158,9 +1172,9 @@ function seen(x: number, z: number) {
 }
 
 /** tilt: the ground's gradient [dh/dx, dh/dz]; when given, the plant's local xz plane is sheared onto the slope. */
-type Plant = { x: number; y: number; z: number; s: number; sy: number; sxz: number; lean: number; c: THREE.Color; pri: number; tilt?: [number, number] };
+export type Plant = { x: number; y: number; z: number; s: number; sy: number; sxz: number; lean: number; c: THREE.Color; pri: number; tilt?: [number, number] };
 
-function plantMatrices(list: Plant[]) {
+export function plantMatrices(list: Plant[]) {
   const e = new THREE.Euler();
   const q = new THREE.Quaternion();
   const v = new THREE.Vector3();
@@ -1191,7 +1205,7 @@ function plantMatrices(list: Plant[]) {
 }
 
 /** A colour between a and b, a little lighter or darker. */
-const tone = (a: THREE.Color, b: THREE.Color, t: number, v: number) => a.clone().lerp(b, t).multiplyScalar(v);
+export const tone = (a: THREE.Color, b: THREE.Color, t: number, v: number) => a.clone().lerp(b, t).multiplyScalar(v);
 
 function Vegetation() {
   const meshes = useMemo(() => {
@@ -1361,13 +1375,13 @@ export function TempleWorld() {
         intensity={TOON ? 2.5 : 3.1}
         color="#ffdcae"
         castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-150}
-        shadow-camera-right={150}
-        shadow-camera-top={110}
-        shadow-camera-bottom={-110}
-        shadow-camera-near={50}
-        shadow-camera-far={800}
+        shadow-mapSize={SECOND ? [4096, 4096] : [2048, 2048]}
+        shadow-camera-left={SECOND ? -310 : -150}
+        shadow-camera-right={SECOND ? 310 : 150}
+        shadow-camera-top={SECOND ? 310 : 110}
+        shadow-camera-bottom={SECOND ? -310 : -110}
+        shadow-camera-near={SECOND ? 10 : 50}
+        shadow-camera-far={SECOND ? 1000 : 800}
         shadow-bias={-0.0006}
         shadow-normalBias={0.06}
       />
