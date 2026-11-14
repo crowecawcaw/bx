@@ -3,6 +3,8 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { CompareWorld } from '../compare/CompareScene';
+import { EzekielTemple } from '../ezekiel/EzekielTemple';
+import { EzekielWorld } from '../ezekiel/World';
 import { Sea } from '../sea/Sea';
 import { SecondTemple } from '../second/SecondTemple';
 import { SeaWorld } from '../sea/SeaWorld';
@@ -26,6 +28,7 @@ const FEATURES = SITE.features;
 const TEMPLE = SITE.id === 'temple';
 const SEA = SITE.id === 'sea';
 const SECOND = SITE.id === 'second';
+const EZEKIEL = SITE.id === 'ezekiel';
 const COMPARE = SITE.id === 'compare';
 
 function tagOf(o: THREE.Object3D | null) {
@@ -200,7 +203,7 @@ function Walk({ post }: { post: ReactNode }) {
     <>
       <DoubleTap />
       <Suspense fallback={null}>
-        <group raycast={() => null}>{SEA ? <SeaWorld /> : TEMPLE || SECOND ? <TempleWorld /> : <World />}</group>
+        <group raycast={() => null}>{SEA ? <SeaWorld /> : EZEKIEL ? <EzekielWorld /> : TEMPLE || SECOND ? <TempleWorld /> : <World />}</group>
         <group onClick={onTap}>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]} visible={false} userData={{ ground: true }}>
             <planeGeometry args={[1000, 1000]} />
@@ -211,6 +214,8 @@ function Walk({ post }: { post: ReactNode }) {
             <Temple />
           ) : SECOND ? (
             <SecondTemple />
+          ) : EZEKIEL ? (
+            <EzekielTemple />
           ) : (
             <>
               <Courtyard />

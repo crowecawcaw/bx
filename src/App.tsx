@@ -8,6 +8,7 @@ const TABS: [SiteId, string][] = [
   ['tabernacle', 'Tabernacle'],
   ['temple', 'Solomon’s Temple'],
   ['second', 'Second Temple'],
+  ['ezekiel', 'Ezekiel’s Temple'],
   ['sea', 'Red Sea'],
   ['compare', 'Side by side'],
 ];
@@ -97,6 +98,31 @@ function SecondIntro() {
   );
 }
 
+function EzekielIntro() {
+  return (
+    <>
+      <h1>Ezekiel’s Temple</h1>
+      <p className="verse">
+        “Son of man, behold with thine eyes, and hear with thine ears, and set thine heart upon all that I shall shew
+        thee.”
+        <br />
+        <span>Ezekiel 40:4</span>
+      </p>
+      <p>
+        Walk the temple Ezekiel saw in vision on a very high mountain: the gates and courts, the altar, the house
+        where the glory returned, and the river that flows from under its threshold. Built to the measurements of
+        Ezekiel 40–48. It was never built, and the info panels set out how it has been read.
+      </p>
+      <ul>
+        <li>Tap the ground to walk · drag to look</li>
+        <li>Tap the inner east gate and the doors of the house to open them</li>
+        <li>Tap the info bubbles for verses and details</li>
+      </ul>
+      <button className="primary">Enter by the east gate</button>
+    </>
+  );
+}
+
 function CompareIntro() {
   return (
     <>
@@ -107,8 +133,8 @@ function CompareIntro() {
         <span>Haggai 2:3</span>
       </p>
       <p>
-        The tabernacle, Solomon’s Temple and the second temple at the same scale, facing east with their Most Holy
-        Places in a line. The camera flies around them.
+        The tabernacle, Solomon’s Temple, the second temple and the temple of Ezekiel’s vision at the same scale, facing
+        east with their Most Holy Places in a line. The camera flies around them.
       </p>
       <ul>
         <li>Drag to turn · pinch or scroll to zoom · two fingers to pan</li>
@@ -144,7 +170,7 @@ function SeaIntro() {
   );
 }
 
-const INTRO = { tabernacle: TabernacleIntro, temple: TempleIntro, second: SecondIntro, sea: SeaIntro, compare: CompareIntro }[SITE_ID];
+const INTRO = { tabernacle: TabernacleIntro, temple: TempleIntro, second: SecondIntro, ezekiel: EzekielIntro, sea: SeaIntro, compare: CompareIntro }[SITE_ID];
 
 export function App() {
   const [entered, setEntered] = useState(false);

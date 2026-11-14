@@ -132,7 +132,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: radial-gradient(circle at 50% 40%, rgba(40, 24, 10, 0.35), rgba(20, 12, 4, 0.75));
 }
 .intro-card {
-  max-width: 440px; background: var(--paper); border: 3px solid var(--ink); border-radius: 20px; padding: 22px 22px 18px;
+  max-width: 460px; min-width: 0; background: var(--paper); border: 3px solid var(--ink); border-radius: 20px; padding: 22px 22px 18px;
   box-shadow: var(--shadow); text-align: center;
   background-image: linear-gradient(90deg, var(--blue), var(--purple) 50%, var(--scarlet));
   background-size: 100% 6px; background-repeat: no-repeat; background-position: top;
@@ -156,9 +156,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .mm-label.big { font-size: 13px; }
 
 .switch { display: inline-block; font-weight: 700; color: var(--purple); text-decoration: none; border-bottom: 2px solid currentColor; }
-.intro .tabs { display: flex; gap: 6px; justify-content: center; margin: 0 0 8px; }
+.intro .tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 0 0 8px; }
 .intro .tabs a, .intro .tabs span {
-  font-size: 13.5px; font-weight: 700; padding: 5px 12px; border-radius: 999px; border: 2px solid var(--ink);
+  white-space: nowrap; font-size: 13.5px; font-weight: 700; padding: 5px 12px; border-radius: 999px; border: 2px solid var(--ink);
   text-decoration: none; color: var(--ink); background: var(--paper-2);
 }
 .intro .tabs span { background: var(--gold); color: #fff; }
@@ -216,6 +216,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .minimap.second .mm-veil { stroke-width: 2.4; }
 .minimap.second .mm-label.big { font-size: 22px; }
 
+/* Ezekiel's temple map */
+.minimap.ezekiel { width: min(50vw, 250px); background: rgba(176, 150, 112, 0.92); }
+.mm-pave { fill: #d8c7a2; }
+.mm-earth { fill: #e8d6b0; }
+.mm-kitchen { fill: #c2ab82; stroke: var(--ink); stroke-width: 0.8; }
+.mm-gatehouse { fill: #cbb68d; stroke: var(--ink); stroke-width: 1.2; }
+.mm-holy { fill: #c79a5c; stroke: var(--ink); stroke-width: 0.6; }
+.mm-river { fill: none; stroke: #3f8fa8; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.minimap.ezekiel .mm-court { fill: #ece3cf; stroke-width: 1.6; }
+.minimap.ezekiel .mm-gate { stroke-width: 6; }
+.minimap.ezekiel .mm-veil { stroke-width: 2.4; }
+.minimap.ezekiel .mm-label.big { font-size: 22px; }
+
 /* Side by side (?site=compare) */
 .cmp-focus {
   position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 14px);
@@ -233,11 +246,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .cmp-label span { font-size: 11.5px; color: var(--muted); }
 .cmp-label.on { background: #f4dc9a; }
-.cmp-facts { width: min(640px, calc(100vw - 24px)); }
+.cmp-facts { width: min(820px, calc(100vw - 24px)); }
+.cmp-scroll { overflow-x: auto; margin: 0 -4px; }
+.cmp-scroll .cmp-table { min-width: 600px; }
 .cmp-passage { z-index: 31; }
 .cmp-table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.35; }
 .cmp-table th, .cmp-table td { text-align: left; vertical-align: top; padding: 6px 5px; border-bottom: 1px dashed #e2d6bd; }
 .cmp-table thead th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); border-bottom: 2px solid var(--paper-2); }
-.cmp-table tbody th { font-size: 12.5px; color: var(--purple); width: 18%; }
+.cmp-table tbody th { font-size: 12.5px; color: var(--purple); width: 14%; }
 .cmp-table .ref { font-size: 11px; padding: 0 6px; margin-top: 2px; }
 @media (max-width: 640px) { .cmp-table { font-size: 12px; } .cmp-table th, .cmp-table td { padding: 5px 3px; } }

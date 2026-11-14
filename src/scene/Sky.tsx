@@ -10,6 +10,7 @@ const INDOOR: Record<string, string[]> = {
   tabernacle: ['holy', 'holiest'],
   temple: ['holy', 'oracle', 'chambers'],
   second: ['holy', 'holiest'],
+  ezekiel: ['holy', 'holiest'],
   sea: [],
 };
 

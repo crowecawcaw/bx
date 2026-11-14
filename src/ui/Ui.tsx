@@ -7,6 +7,7 @@ import { SITE } from '../sites';
 import { useStore } from '../store';
 import { tapToWalk, usePlayerDot } from './mapCommon';
 import { SeaMap, Walked } from './SeaMap';
+import { EzekielMap } from './EzekielMap';
 import { SecondMap } from './SecondMap';
 import { TempleMap } from './TempleMap';
 
@@ -15,13 +16,15 @@ const GENERAL = SITE.general;
 const TEMPLE = SITE.id === 'temple';
 const SEA = SITE.id === 'sea';
 const SECOND = SITE.id === 'second';
+const EZEKIEL = SITE.id === 'ezekiel';
 const OTHERS: [SiteId, string][] = (
   [
     ['tabernacle', 'Visit the tabernacle ›'],
     ['temple', "Visit Solomon's Temple ›"],
     ['second', 'Visit the second temple ›'],
+    ['ezekiel', 'Visit Ezekiel’s temple ›'],
     ['sea', 'Cross the Red Sea ›'],
-    ['compare', 'See all three side by side ›'],
+    ['compare', 'See them side by side ›'],
   ] as [SiteId, string][]
 ).filter(([id]) => id !== SITE_ID);
 
@@ -141,7 +144,7 @@ function ScripturePanel() {
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={SEA ? 'e.g. Exodus 14:21-22' : TEMPLE ? 'e.g. 1 Kings 6:23-28' : SECOND ? 'e.g. John 2:13-21' : 'e.g. Exodus 26:31-33'}
+          placeholder={SEA ? 'e.g. Exodus 14:21-22' : TEMPLE ? 'e.g. 1 Kings 6:23-28' : SECOND ? 'e.g. John 2:13-21' : EZEKIEL ? 'e.g. Ezekiel 47:1-12' : 'e.g. Exodus 26:31-33'}
           aria-label="Bible reference"
           enterKeyHint="search"
         />
@@ -184,6 +187,12 @@ function Help() {
         <p>
           Walk with the multitude toward the far shore. The seabed rises as you near it. See what happens when you climb
           above the level of the sea (Ex 14:26-28).
+        </p>
+      ) : EZEKIEL ? (
+        <p>
+          <b>Tap a door</b> when you are close to open or close it: the inner gate toward the east (opened on the
+          sabbath), and the folding doors of the temple and of the most holy place. The outer east gate stays shut
+          (Ezek 44:2): go out by the north or south gate to follow the river.
         </p>
       ) : SECOND ? (
         <p>
@@ -333,7 +342,7 @@ export function Ui() {
           </button>
         </nav>
       </div>
-      {map && (SEA ? <SeaMap /> : TEMPLE ? <TempleMap /> : SECOND ? <SecondMap /> : <TabernacleMap />)}
+      {map && (SEA ? <SeaMap /> : TEMPLE ? <TempleMap /> : SECOND ? <SecondMap /> : EZEKIEL ? <EzekielMap /> : <TabernacleMap />)}
       {toast && <div className="toast">{toast}</div>}
       <InfoPanel />
       <SidePanel />

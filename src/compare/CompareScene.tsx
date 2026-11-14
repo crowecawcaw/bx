@@ -10,6 +10,11 @@ import { TOON, toon } from '../scene/materials';
 import { SkyLight } from '../scene/Sky';
 import { Tent } from '../scene/Tent';
 import { sandTexture } from '../scene/textures';
+import { Altar as EzekielAltar, Stream } from '../ezekiel/Altar';
+import { Courts as EzekielCourts } from '../ezekiel/Courts';
+import { Y as EY } from '../ezekiel/dims';
+import { Gates as EzekielGates } from '../ezekiel/Gates';
+import { House as EzekielHouse } from '../ezekiel/House';
 import { Courts as SecondCourts, Mount } from '../second/Courts';
 import { Y as SY } from '../second/dims';
 import { House as SecondHouse } from '../second/House';
@@ -33,8 +38,10 @@ interface Layout {
   /** Where each stands, north to south, with its courts and without them. */
   courts: { z: number; y: number; box: Box3 };
   houses: { z: number; y: number; box: Box3 };
-  /** Height for the label, above the house's floor level. */
+  /** Height for the label (in the group's own frame). */
   label: number;
+  /** In "houses only" the group drops by this much so the house's court is at ground level; heights are measured from that court. */
+  lift?: number;
   sub: string;
 }
 
@@ -61,11 +68,21 @@ export const LAYOUT: Record<Shrine, Layout> = {
     x: 73,
     courts: { z: 340, y: 0, box: [-160, 340, -250, 310, 116] },
     houses: { z: 98, y: -SY.priests, box: [-100, 18, -50, 50, 100] },
-    label: 125,
+    label: 125 + SY.house - SY.priests,
+    lift: SY.priests,
     sub: 'House 100 × 100 × 100',
   },
+  ezekiel: {
+    name: 'Ezekiel’s Temple',
+    x: 124,
+    courts: { z: 925, y: 0, box: [-250, 257, -257, 257, 50] },
+    houses: { z: 190, y: -EY.inner, box: [-150, -40, -30, 30, 42] },
+    label: EY.house + 42,
+    lift: EY.inner,
+    sub: 'House 100 long · wall 500 square',
+  },
 };
-const SHRINES: Shrine[] = ['tabernacle', 'solomon', 'second'];
+const SHRINES: Shrine[] = ['tabernacle', 'solomon', 'second', 'ezekiel'];
 
 /** World-space bounds of one shrine, or all of them, in the current mode. */
 function boundsOf(f: Focus, houses: boolean) {
@@ -82,7 +99,7 @@ function boundsOf(f: Focus, houses: boolean) {
     x1 = Math.max(x1, m.box[1] + L.x);
     z0 = Math.min(z0, m.box[2] + m.z);
     z1 = Math.max(z1, m.box[3] + m.z);
-    h = Math.max(h, m.box[4] + m.y + (houses && s === 'second' ? SY.priests : 0));
+    h = Math.max(h, m.box[4] + m.y + (houses ? L.lift ?? 0 : 0));
   }
   return { x: (x0 + x1) / 2, z: (z0 + z1) / 2, r: Math.hypot(x1 - x0, z1 - z0) / 2, h };
 }
@@ -142,7 +159,7 @@ function Label({ id }: { id: Shrine }) {
   const L = LAYOUT[id];
   const setFocus = useCompare((s) => s.setFocus);
   const focus = useCompare((s) => s.focus);
-  const y = L.label + (id === 'second' ? SY.house - SY.priests : 0);
+  const y = L.label;
   return (
     <Html position={[L.houses.box[0] + (L.houses.box[1] - L.houses.box[0]) / 2, y, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
       <button
@@ -279,8 +296,8 @@ function Ground() {
 }
 
 /**
- * The tabernacle, Solomon's Temple and the second temple side by side, all at one scale (a cubit is
- * a world unit), facing east with their Most Holy Places on one north–south line.
+ * The tabernacle, Solomon's Temple, the second temple and Ezekiel's temple side by side, all at one
+ * scale (a cubit is a world unit), facing east with their Most Holy Places on one north–south line.
  */
 export function CompareWorld() {
   return (
@@ -349,6 +366,23 @@ export function CompareWorld() {
         pad={
           <group position={[0, SY.priests, 0]}>
             <Pad w={150} d={130} kind="pave" x={-41} />
+          </group>
+        }
+      />
+      <Placed
+        id="ezekiel"
+        house={<EzekielHouse />}
+        courts={
+          <>
+            <EzekielCourts />
+            <EzekielGates />
+            <EzekielAltar />
+            <Stream />
+          </>
+        }
+        pad={
+          <group position={[0, EY.inner, 0]}>
+            <Pad w={130} d={80} kind="pave" x={-92} />
           </group>
         }
       />

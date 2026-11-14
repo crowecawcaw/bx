@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
-/** The three sanctuaries shown side by side. */
-export type Shrine = 'tabernacle' | 'solomon' | 'second';
+/** The four sanctuaries shown side by side. */
+export type Shrine = 'tabernacle' | 'solomon' | 'second' | 'ezekiel';
 export type Focus = 'all' | Shrine;
 
 interface CompareState {

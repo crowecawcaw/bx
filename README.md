@@ -1,6 +1,6 @@
 # Tabernacle Explorer
 
-Walk through the Old Testament tabernacle in 3D, built to the measurements in Exodus 25–40, or through Solomon's Temple (`?site=temple`), built to 1 Kings 6–8 and 2 Chronicles 3–5, or the second temple as Herod rebuilt it (`?site=second`), or cross the Red Sea (`?site=sea`, Exodus 14). **Side by side** (`?site=compare`) shows the tabernacle and both temples together at one scale, and the camera flies around them. It runs in a phone or desktop browser. The intro screen switches between them.
+Walk through the Old Testament tabernacle in 3D, built to the measurements in Exodus 25–40, or through Solomon's Temple (`?site=temple`), built to 1 Kings 6–8 and 2 Chronicles 3–5, or the second temple as Herod rebuilt it (`?site=second`), or the temple of Ezekiel's vision (`?site=ezekiel`, Ezekiel 40–48), or cross the Red Sea (`?site=sea`, Exodus 14). **Side by side** (`?site=compare`) shows the tabernacle and the three temples together at one scale, and the camera flies around them. It runs in a phone or desktop browser. The intro screen switches between them.
 
 - **Tap** the ground to walk there (pathfinding goes around walls). **Double-tap** to jump there. **Drag** to look around. **WASD** or the arrow keys also work.
 - **Tap a curtain** when you are close to draw it aside: the court gate, the door of the tent, or the veil.
@@ -37,9 +37,21 @@ Open with `?site=second`. This is the house of the Gospels and Acts: Zerubbabel'
 
 It stands in the same Jerusalem landscape as Solomon's Temple, on Herod's larger platform. Tap the Nicanor gate, the doors of the Holy Place, or the veil to open them. The code is in `src/second/`, and the verses and notes are in `src/data/secondSpecs.ts`.
 
+## Ezekiel's Temple
+
+Open with `?site=ezekiel`. This is the temple Ezekiel saw in a vision in the 25th year of the exile (Ezek 40:1-4). It was never built. Ezekiel measures it in more detail than any other sanctuary, and the model follows his measurements in his long cubit, "a cubit and an hand breadth" (40:5). The parts along the east–west line add up to the 500 cubits of the wall: outer gate 50, outer court 100, inner gate 50, inner court 100, the house 100, and the separate place and the building behind it 100. The altar stands at the centre of the whole square.
+
+- **The wall** is 500 cubits square, a reed thick and a reed high (40:5; 42:15-20). The King James Version reads "reeds" in 42:16-20, and the info panel explains why the model uses cubits.
+- **Six gates** of one measure, 50 × 25, with three guard chambers on each side, two thresholds, a porch and palm trees carved on the posts (40:6-37). The outer gates have seven steps up; the inner gates, turned about, have eight. The outer east gate is shut for good, because the glory of the LORD came in by it (43:1-5; 44:1-3). The inner east gate opens on the sabbath (46:1); tap it.
+- **The outer court** has its pavement, thirty chambers and the four kitchens in the corners (40:17-18; 46:21-24). **The inner court** is 100 square, with the priests' chambers, the eight tables at the north gate (40:38-46) and the stepped altar with its stairs on the east (43:13-17).
+- **The house** stands on a foundation six cubits high (41:8), with side chambers in three storeys on three sides. Inside are a holy place 40 × 20 panelled in wood carved with two-faced cherubim (a man's face and a young lion's) and palm trees (41:16-20), the wooden altar that is "the table that is before the LORD" (41:22), and an empty most holy place, 20 × 20, filled with the glory (43:5). Both rooms have folding doors (41:23-24), with no veil.
+- **The water** trickles from under the threshold, south of the altar, and out under the shut east gate (47:1-2). Outside, it runs down the mountain as a river with trees on both banks, toward a sea (47:3-12). South, below the mountain, lies the city with twelve gates (40:2; 48:30-35).
+
+Most heights are not given, and the info panels say what the model chose. They also set out the main ways the vision has been read (a temple still to come, a plan offered on condition, or a picture fulfilled in Christ and in Revelation 21–22), without choosing between them. The code is in `src/ezekiel/`, and the verses and notes are in `src/data/ezekielSpecs.ts`.
+
 ## Side by side
 
-Open with `?site=compare`. The tabernacle, Solomon's Temple and the second temple stand in a row, facing east, with their Most Holy Places on one north–south line. One world unit is one cubit for all three. The camera circles them on its own. Drag to turn, pinch or scroll to zoom, or tap a name to fly to it. **Houses only** hides the courts and slides the three houses together. **Facts** shows a table of their measurements, with the verses. The code is in `src/compare/`.
+Open with `?site=compare`. The tabernacle, Solomon's Temple, the second temple and Ezekiel's temple stand in a row, facing east, with their Most Holy Places on one north–south line. One world unit is one cubit for all four (Ezekiel's cubit is a handbreadth longer, so his temple is drawn about a sixth smaller than true). The camera circles them on its own. Drag to turn, pinch or scroll to zoom, or tap a name to fly to it. **Houses only** hides the courts and slides the houses together. **Facts** shows a table of their measurements, with the verses. The code is in `src/compare/`.
 
 ## The Red Sea
 

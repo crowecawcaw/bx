@@ -22,6 +22,10 @@ const ALIASES: Record<string, string> = {
   jn: 'John', john: 'John',
   ac: 'Acts', acts: 'Acts',
   eph: 'Ephesians', ephesians: 'Ephesians',
+  ezk: 'Ezekiel', eze: 'Ezekiel', ezek: 'Ezekiel', ezekiel: 'Ezekiel',
+  jl: 'Joel', joel: 'Joel',
+  zec: 'Zechariah', zech: 'Zechariah', zechariah: 'Zechariah',
+  rev: 'Revelation', re: 'Revelation', revelation: 'Revelation', revelations: 'Revelation',
 };
 
 const SHORT: Record<string, string> = {
@@ -43,6 +47,10 @@ const SHORT: Record<string, string> = {
   John: 'John',
   Acts: 'Acts',
   Ephesians: 'Eph',
+  Ezekiel: 'Ezek',
+  Joel: 'Joel',
+  Zechariah: 'Zech',
+  Revelation: 'Rev',
 };
 
 /** "2 Chronicles 3:4" → "2 Chr 3:4" */
