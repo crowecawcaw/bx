@@ -17,7 +17,10 @@ import { levelFor } from './nav';
 import { Post } from './Post';
 import { Tent } from './Tent';
 
-const POST = !new URLSearchParams(location.search).has('nopost');
+const QUERY = new URLSearchParams(location.search);
+const POST = !QUERY.has('nopost');
+/** `?q=0|1|2` pins the quality step instead of letting the frame rate choose it. */
+const PINNED = QUERY.has('q') ? THREE.MathUtils.clamp(Number(QUERY.get('q')) || 0, 0, 2) : null;
 
 const CURTAIN_REACH = SITE.reach;
 const FEATURES = SITE.features;
@@ -156,7 +159,8 @@ const STEPS: [number, number][] = [
 ];
 
 export function Scene() {
-  const [step, setStep] = useState(2);
+  const [auto, setStep] = useState(2);
+  const step = PINNED ?? auto;
   const dpr = Math.min(window.devicePixelRatio || 1, STEPS[step][0]);
   return (
     <Canvas

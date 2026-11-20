@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { SkyDome, Wind } from '../scene/Environment';
 import { TOON, toon } from '../scene/materials';
+import { setAir } from '../scene/Post';
 import { SkyLight } from '../scene/Sky';
 import { DEBUG } from '../scene/dims';
 import { GREAT } from './dims';
@@ -1350,18 +1351,25 @@ function DebugHook() {
 }
 
 export function TempleWorld() {
+  useEffect(() => {
+    if (TOON) return;
+    // haze pools in the Kidron and the Hinnom below the courts
+    setAir({ sun: [240, 160, 135], haze: '#e4d6bd', glow: '#ffe6b8', density: 0.0005, falloff: 0.006, base: -120, shafts: 0.2 });
+    return () => setAir({ sun: [240, 160, 135], haze: '#000', glow: '#000', density: 0 });
+  }, []);
   return (
     <>
-      {TOON ? <SkyDome /> : <SkyLight sun={[240, 160, 135]} haze="#ecdcbf" ground="#c09a68" light={0.45} />}
+      {TOON ? <SkyDome /> : <SkyLight sun={[240, 160, 135]} haze="#ecdcbf" ground="#c09a68" light={0.5} rayleigh={2.4} exposure={0.85} />}
       <fog attach="fog" args={['#ecdcbf', 380, 2400]} />
       <hemisphereLight args={['#a9b6e8', '#c49460', TOON ? 1.05 : 0.45]} />
       {/* morning sun from the east-southeast, over the Mount of Olives */}
       <directionalLight
         position={[240, 160, 135]}
-        intensity={TOON ? 2.5 : 3.1}
+        intensity={TOON ? 2.5 : 3.4}
         color="#ffdcae"
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={TOON ? [2048, 2048] : [4096, 4096]}
+        shadow-radius={TOON ? 1 : 2.5}
         shadow-camera-left={-150}
         shadow-camera-right={150}
         shadow-camera-top={110}
