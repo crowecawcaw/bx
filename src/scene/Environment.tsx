@@ -1,10 +1,13 @@
 import { useFrame } from '@react-three/fiber';
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { COURT } from './dims';
 import { TOON, toon, windTime } from './materials';
+import { setAir } from './Post';
 import { SkyLight } from './Sky';
+import { SUN } from './terrain';
+import { Acacias, CampSmoke, Dust, Plants, Rocks, Tents, Terrain } from './Wilderness';
 import { sandTexture, trodTexture } from './textures';
 
 export function SkyDome() {
@@ -213,9 +216,17 @@ function CloudPillar() {
           if (r2 > 1.0) discard;
           vec3 n = vec3(p, sqrt(1.0 - r2));
           float l = dot(n, normalize(vec3(0.35, 0.8, 0.5)));
-          vec3 col = l > 0.6 ? vec3(1.0, 0.995, 0.97) : l > 0.2 ? vec3(0.91, 0.89, 0.84) : vec3(0.78, 0.75, 0.69);
+          ${
+            TOON
+              ? `vec3 col = l > 0.6 ? vec3(1.0, 0.995, 0.97) : l > 0.2 ? vec3(0.91, 0.89, 0.84) : vec3(0.78, 0.75, 0.69);
           float a = 1.0 - smoothstep(0.35, 1.0, r2);
-          gl_FragColor = vec4(col, a * 0.92);
+          gl_FragColor = vec4(col, a * 0.92);`
+              : `// billows: sunlit crowns over blue-grey hollows, with soft ragged edges
+          float rag = sin(p.x * 5.0 + vUv.y * 9.0) * sin(p.y * 6.0 - vUv.x * 7.0);
+          vec3 col = mix(vec3(0.5, 0.52, 0.62), vec3(2.1, 1.98, 1.8), smoothstep(-0.25, 0.9, l + rag * 0.12));
+          float a = 1.0 - smoothstep(0.2, 1.0, r2 + rag * 0.12);
+          gl_FragColor = vec4(col, a * 0.8);`
+          }
         }`,
       // soft puffs that blend into each other; no depth writes, so the ink pass leaves them alone
       transparent: true,
@@ -329,20 +340,25 @@ export function Wind() {
 }
 
 export function World() {
-  const ground = useMemo(() => toon('ground', { map: sandTexture(), color: TOON ? '#ffffff' : '#ffe0b4' }), []);
+  const ground = useMemo(() => toon('ground', { map: sandTexture(), color: '#ffffff' }), []);
+  useEffect(() => {
+    if (TOON) return;
+    setAir({ sun: SUN, haze: '#e6d3b6', glow: '#ffe3b0', density: 0.0007, falloff: 0.011, shafts: 0.22 });
+    return () => setAir({ sun: SUN, haze: '#000', glow: '#000', density: 0 });
+  }, []);
   return (
     <>
-      {TOON ? <SkyDome /> : <SkyLight sun={[75, 50, 42]} haze="#ecdcc0" ground="#c08850" light={0.45} />}
-      <fog attach="fog" args={['#ecdcc0', 220, 1400]} />
+      {TOON ? <SkyDome /> : <SkyLight sun={SUN} haze="#ecdcc0" ground="#c08850" light={0.5} rayleigh={2.4} exposure={0.85} />}
+      {TOON ? <fog attach="fog" args={['#ecdcc0', 220, 1400]} /> : <fog attach="fog" args={['#ecdcc0', 330, 2600]} />}
       {/* cool sky fill, so shadows read blue-violet against the warm sun */}
-      <hemisphereLight args={['#a9b6e8', '#c49460', TOON ? 1.0 : 0.45]} />
+      <hemisphereLight args={['#a9b6e8', '#c49460', TOON ? 1.0 : 0.4]} />
       {/* a low morning sun from the east-southeast, for long shadows */}
       <directionalLight
-        position={[75, 50, 42]}
-        intensity={TOON ? 2.5 : 3.1}
+        position={SUN}
+        intensity={TOON ? 2.5 : 3.4}
         color="#ffdcae"
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={TOON ? [2048, 2048] : [4096, 4096]}
         shadow-camera-left={-70}
         shadow-camera-right={70}
         shadow-camera-top={45}
@@ -351,15 +367,31 @@ export function World() {
         shadow-camera-far={250}
         shadow-bias={-0.0005}
         shadow-normalBias={0.04}
+        shadow-radius={TOON ? 1 : 2.5}
       />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow material={ground} userData={{ ground: true }}>
-        <planeGeometry args={[3000, 3000]} />
-      </mesh>
-      <Trodden />
-      <Scatter />
+      {TOON ? (
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow material={ground} userData={{ ground: true }}>
+            <planeGeometry args={[3000, 3000]} />
+          </mesh>
+          <Trodden />
+          <Scatter />
+          <Mountains />
+          <Camp />
+        </>
+      ) : (
+        <>
+          <Terrain />
+          <Trodden />
+          <Rocks />
+          <Plants />
+          <Acacias />
+          <Tents />
+          <CampSmoke />
+          <Dust />
+        </>
+      )}
       <Wind />
-      <Mountains />
-      <Camp />
       <CloudPillar />
     </>
   );

@@ -21,6 +21,8 @@ interface SkyProps {
   ground: string;
   turbidity?: number;
   rayleigh?: number;
+  /** How much of the sky is clouded, 0..1. */
+  clouds?: number;
   /** Brightness of the visible sky. */
   exposure?: number;
   /** How strongly the sky lights and reflects in materials, outdoors. */
@@ -29,7 +31,10 @@ interface SkyProps {
   background?: boolean;
 }
 
-function makeSky({ sun, haze, turbidity = 2, rayleigh = 1.6, exposure = 1 }: SkyProps) {
+/** Shared clock that drifts the clouds. */
+const cloudTime = { value: 0 };
+
+function makeSky({ sun, haze, turbidity = 2, rayleigh = 1.6, exposure = 1, clouds = 0.45 }: SkyProps) {
   const sky = new SkyMesh();
   sky.scale.setScalar(10000);
   sky.frustumCulled = false;
@@ -42,13 +47,53 @@ function makeSky({ sun, haze, turbidity = 2, rayleigh = 1.6, exposure = 1 }: Sky
   u.sunPosition.value.set(...sun).normalize();
   u.haze = { value: new THREE.Color(haze) };
   u.exposure = { value: exposure };
-  // scale the sky's brightness, and melt the horizon into the haze so fogged hills sit in it
+  u.cloudTime = cloudTime;
+  u.cloudCover = { value: clouds };
+  // Scale the sky's brightness, lay high cloud across it, and melt the horizon into the haze so
+  // fogged hills sit in it.
   sky.material.fragmentShader = sky.material.fragmentShader
-    .replace('void main() {', 'uniform vec3 haze;\nuniform float exposure;\nvoid main() {')
+    .replace(
+      'void main() {',
+      /* glsl */ `uniform vec3 haze;
+      uniform float exposure;
+      uniform float cloudTime;
+      uniform float cloudCover;
+      float chash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float cnoise(vec2 p) {
+        vec2 i = floor(p), f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(chash(i), chash(i + vec2(1.0, 0.0)), f.x), mix(chash(i + vec2(0.0, 1.0)), chash(i + vec2(1.0, 1.0)), f.x), f.y);
+      }
+      float cfbm(vec2 p) {
+        float s = 0.0, a = 0.5;
+        for (int k = 0; k < 5; k++) { s += a * cnoise(p); p = p * 2.07 + vec2(13.1, 7.7); a *= 0.5; }
+        return s;
+      }
+      // thin streaked cirrus over broken fair-weather cloud
+      float cloudAt(vec2 p) {
+        vec2 w = p + 0.35 * vec2(cfbm(p * 0.7 + 3.1), cfbm(p * 0.7 - 5.2));
+        float low = smoothstep(1.28 - cloudCover, 1.62 - cloudCover, cfbm(w * 0.55) + 0.5 * cfbm(w * 1.7));
+        float high = smoothstep(0.55, 0.95, cfbm(vec2(p.x * 0.22, p.y * 1.1) + 9.0)) * 0.3;
+        return clamp(low + high * cloudCover * 1.6, 0.0, 1.0);
+      }
+      void main() {`,
+    )
     .replace(
       'gl_FragColor = vec4( retColor, 1.0 );',
-      `retColor *= exposure;
+      /* glsl */ `retColor *= exposure;
       float up = direction.y;
+      if (cloudCover > 0.0 && up > 0.0) {
+        vec2 cp = direction.xz / (up + 0.09) * 1.15 + vec2(cloudTime * 0.004, cloudTime * 0.0015);
+        float d = cloudAt(cp);
+        // denser toward the sun's side means this part of the cloud lies in its own shade
+        vec3 sunD = normalize(vSunDirection);
+        float shade = clamp((cloudAt(cp + sunD.xz * 0.16) - d) * 1.6 + 0.35 * d, 0.0, 1.0);
+        float toSun = max(dot(direction, sunD), 0.0);
+        vec3 lit = vec3(1.25, 1.17, 1.05) + vec3(1.4, 1.0, 0.55) * pow(toSun, 10.0);
+        vec3 dark = mix(retColor, vec3(0.72, 0.74, 0.82), 0.7);
+        vec3 cloud = mix(lit, dark, shade);
+        retColor = mix(retColor, cloud, d * smoothstep(0.015, 0.2, up));
+      }
       retColor = mix(haze, retColor, smoothstep(-0.01, 0.16, up) * 0.85 + 0.15 * step(0.0, up));
       gl_FragColor = vec4( retColor, 1.0 );`,
     );
@@ -115,7 +160,8 @@ export function SkyLight(props: SkyProps) {
     };
   }, [gl, scene]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useFrame((_, dt) => {
+  useFrame(({ clock }, dt) => {
+    cloudTime.value = clock.elapsedTime;
     if (!envs.current) return;
     const indoor = !!INDOOR[SITE.id]?.includes(SITE.regionOf(player.x, player.z));
     // the change happens as you pass a doorway or curtain, which hides the switch

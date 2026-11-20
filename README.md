@@ -42,7 +42,9 @@ npm run dev
 npm run build
 ```
 
-Built with React, TypeScript, Vite, three.js and @react-three/fiber. The toon shading uses `MeshToonMaterial` with a 4-step ramp and inverted-hull outlines. All textures are drawn procedurally on canvas, so there are no image assets.
+Built with React, TypeScript, Vite, three.js and @react-three/fiber. All textures are drawn procedurally on canvas, so there are no image assets.
+
+Surfaces are physically shaded and lit by a sky with drifting cloud. The picture is finished in `src/scene/Post.tsx`: ambient occlusion, haze that lies on the ground and brightens toward the sun, shafts of light, bloom and a colour grade. Quality steps down by itself when frames run slow; `?q=0`, `?q=1` or `?q=2` pins it. The wilderness around the tabernacle (`src/scene/Wilderness.tsx`, `src/scene/terrain.ts`) is one sheet of terrain from the court out to the granite ranges, with goats'-hair tents, boulders, dry grass, broom, acacias, cooking smoke and dust in the air. `?toon` brings back the original cel shading: `MeshToonMaterial` with a 4-step ramp and ink outlines.
 
 ## Deployment (GitHub Pages)
 

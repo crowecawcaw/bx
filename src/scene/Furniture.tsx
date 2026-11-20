@@ -4,7 +4,9 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { POS } from './dims';
-import { bronze, pureGold, toon } from './materials';
+import { TOON, bronze, pureGold, toon, windTime } from './materials';
+import { air } from './Post';
+import { PUFF_FRAG } from './puffs';
 import { Cherub } from './Cherub';
 import { Model } from './Model';
 import { netTexture } from './textures';
@@ -335,7 +337,63 @@ export function Menorah({ at = POS.menorah, rotY = -Math.PI / 2, feature = 'meno
 
 // ───────────────────────── Altar of incense (Ex 30:1-10) ─────────────────────────
 
-export function Smoke({ y, spread, count, color, scale = 1 }: { y: number; spread: number; count: number; color: string; scale?: number }) {
+export function Smoke(props: { y: number; spread: number; count: number; color: string; scale?: number }) {
+  return TOON ? <ToonSmoke {...props} /> : <SoftSmoke {...props} />;
+}
+
+/** Smoke as soft sunlit billows that swell and thin as they climb. */
+function SoftSmoke({ y, spread, count, color, scale = 1 }: { y: number; spread: number; count: number; color: string; scale?: number }) {
+  const { geo, mat } = useMemo(() => {
+    const N = count * 3;
+    const quad = new THREE.PlaneGeometry(1, 1);
+    const g = new THREE.InstancedBufferGeometry();
+    g.index = quad.index;
+    g.setAttribute('position', quad.attributes.position);
+    g.setAttribute('uv', quad.attributes.uv);
+    const seed = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) seed.set([i / N, Math.random() * 6.28, Math.random()], i * 3);
+    g.setAttribute('seed', new THREE.InstancedBufferAttribute(seed, 3));
+    g.instanceCount = N;
+    const c = new THREE.Color(color);
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        ...THREE.UniformsLib.fog,
+        time: windTime,
+        sunDir: { value: air.sun },
+        lit: { value: c.clone().multiplyScalar(1.7) },
+        shade: { value: c.clone().multiplyScalar(0.45).lerp(new THREE.Color(0.3, 0.32, 0.42), 0.35) },
+        opacity: { value: 0.5 },
+      },
+      vertexShader: /* glsl */ `
+        attribute vec3 seed;
+        uniform float time;
+        varying vec2 vUv;
+        varying float vFade;
+        varying float vSeed;
+        #include <fog_pars_vertex>
+        void main() {
+          float t = fract(time * 0.11 + seed.x);
+          vec3 c = vec3(sin(t * 6.0 + seed.y) * ${spread.toFixed(2)} * t, ${y.toFixed(2)} + t * ${(4.6 * scale).toFixed(2)}, cos(t * 5.0 + seed.y) * ${spread.toFixed(2)} * t);
+          float size = (0.22 + t * 1.25 + seed.z * 0.2) * ${scale.toFixed(2)};
+          vFade = smoothstep(0.0, 0.08, t) * (1.0 - smoothstep(0.3, 1.0, t));
+          vSeed = seed.z;
+          vec4 mvPosition = modelViewMatrix * vec4(c, 1.0);
+          mvPosition.xy += position.xy * size;
+          vUv = uv;
+          gl_Position = projectionMatrix * mvPosition;
+          #include <fog_vertex>
+        }`,
+      fragmentShader: '#include <fog_pars_fragment>\n' + PUFF_FRAG,
+      transparent: true,
+      depthWrite: false,
+      fog: true,
+    });
+    return { geo: g, mat };
+  }, [y, spread, count, color, scale]);
+  return <mesh geometry={geo} material={mat} frustumCulled={false} raycast={() => null} renderOrder={3} />;
+}
+
+function ToonSmoke({ y, spread, count, color, scale = 1 }: { y: number; spread: number; count: number; color: string; scale?: number }) {
   const group = useRef<THREE.Group>(null);
   const mat = useMemo(() => new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 0.5, depthWrite: false }), [color]);
   const seeds = useMemo(() => Array.from({ length: count }, (_, i) => ({ o: i / count, a: Math.random() * 6.28 })), [count]);
